@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from fpdf import FPDF2
+from fpdf2 import FPDF2
 import tempfile
 import os
 import re
