@@ -276,12 +276,39 @@ Guidelines:
 
     # PDF
     pdf = PDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     pdf.set_font("Arial", size=12)
 
-    for para in clean_gpt_text(summary):
-        pdf.multi_cell(0, 10, para.encode("latin-1", "ignore").decode("latin-1"))
+    # Compute effective page width for safe wrapping
+    effective_page_width = pdf.w - 2 * pdf.l_margin
+
+    def sanitize_text(text):
+        t = (text or "").strip()
+        t = t.encode("latin-1", "ignore").decode("latin-1")
+        return t
+
+    def write_multiline(text, line_height=8):
+        t = sanitize_text(text)
+        if not t:
+            return
+        # Guard against extremely long unbroken tokens by inserting soft breaks
+        max_token_len = 120
+        tokens = t.split(" ")
+        rebuilt = []
+        for token in tokens:
+            if len(token) > max_token_len:
+                # Split long token into chunks with spaces so fpdf can wrap
+                chunks = [token[i:i+max_token_len] for i in range(0, len(token), max_token_len)]
+                rebuilt.extend(chunks)
+            else:
+                rebuilt.append(token)
+        safe_text = " ".join(rebuilt)
+        pdf.multi_cell(effective_page_width, line_height, safe_text)
         pdf.ln(1)
+
+    for para in clean_gpt_text(summary):
+        write_multiline(para)
 
     for fig_path in [img1, img2, img3]:
         pdf.image(fig_path, x=10, w=180)
@@ -298,8 +325,7 @@ Designing for Demand, Not Just Distribution
 A common pitfall in tokenized ecosystems is the decoupling of token emissions from actual product usage or demand. When supply outpaces utility, it triggers sell pressure, user attrition, and a negative flywheel. Our approach at TDeFi ensures that token release schedules are dynamically tied to verifiable demand metrics - whether that's active users, protocol revenue, or ecosystem participation. We engineer feedback loops that reward value creation, not just speculation. Tokenization is a powerful instrument, but only when wielded with precision - designed not as a shortcut to liquidity, but as a long-term mechanism for decentralized ownership, utility alignment, and sustainable network growth.
 """
     for para in tdefi_note.strip().split("\n\n"):
-        pdf.multi_cell(0, 10, para.strip().encode("latin-1", "ignore").decode("latin-1"))
-        pdf.ln(1)
+        write_multiline(para)
 
     pdf_bytes = pdf.output(dest='S').encode('latin-1', 'ignore')
     st.download_button("📄 Download PDF", data=pdf_bytes, file_name=f"{project_name}_Audit_Report.pdf", mime="application/pdf")
