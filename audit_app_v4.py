@@ -1,8 +1,10 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from fpdf import FPDF
+from fpdf import FPDF2
 import tempfile
 import os
 import re
@@ -327,5 +329,9 @@ A common pitfall in tokenized ecosystems is the decoupling of token emissions fr
     for para in tdefi_note.strip().split("\n\n"):
         write_multiline(para)
 
-    pdf_bytes = pdf.output(dest='S').encode('latin-1', 'ignore')
+    pdf_out = pdf.output(dest='S')
+    if isinstance(pdf_out, (bytes, bytearray)):
+        pdf_bytes = bytes(pdf_out)
+    else:
+        pdf_bytes = str(pdf_out).encode('latin-1', 'ignore')
     st.download_button("📄 Download PDF", data=pdf_bytes, file_name=f"{project_name}_Audit_Report.pdf", mime="application/pdf")
