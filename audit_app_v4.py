@@ -200,7 +200,13 @@ if st.button("Show Audit Report"):
     st.pyplot(fig3)
 
     # GPT prompt
-    client = OpenAI(api_key=st.secrets["openai"]["api_key"])
+    api_key = os.environ.get("OPENAI_API_KEY") or (
+        (getattr(st, "secrets", None) or {}).get("openai", {}).get("api_key")
+    )
+    if not api_key:
+        st.error("Missing OpenAI API key. Set OPENAI_API_KEY env var or add st.secrets['openai']['api_key'].")
+        st.stop()
+    client = OpenAI(api_key=api_key)
     prompt = f"""
 You are a senior tokenomics analyst auditing the project '{project_name}'. You've reviewed over 150 token models.
 
