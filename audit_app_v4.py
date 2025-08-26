@@ -298,27 +298,33 @@ if len(pools) > 0:
         </div>
         """, unsafe_allow_html=True)
 
-# Build release schedule dataframe
+# Build release schedule dataframe in token units
 months = list(range(72))
 df = pd.DataFrame({"Month": months})
-df["Monthly Release %"] = 0
-df["Cumulative %"] = 0
+df["Monthly Release %"] = 0.0
+df["Cumulative %"] = 0.0
 
 for pool in pools:
-    tge_amount = allocations[pool] * vesting_schedule[pool]["tge"] / 100
+    tge_percent = allocations[pool] * vesting_schedule[pool]["tge"] / 100.0
     cliff = vesting_schedule[pool]["cliff"]
     vest = vesting_schedule[pool]["vesting"]
-    monthly_amount = (allocations[pool] - tge_amount) / vest if vest > 0 else 0
-    
-    release = [0] * 72
-    release[0] += tge_amount
+    monthly_percent = (allocations[pool] - tge_percent) / vest if vest > 0 else 0.0
+
+    release = [0.0] * 72
+    # Month 0 (TGE)
+    release[0] += tge_percent
+    # Vesting starts after the cliff
     for m in range(cliff + 1, cliff + vest + 1):
         if m < 72:
-            release[m] += monthly_amount
+            release[m] += monthly_percent
+
     df[pool] = release
     df["Monthly Release %"] += df[pool]
 
-df["Cumulative %"] = df["Monthly Release %"].cumsum()
+# Convert to tokens and recompute cumulative percent
+df["Monthly Release Tokens"] = df["Monthly Release %"] * total_supply_tokens / 100.0
+df["Cumulative Tokens"] = df["Monthly Release Tokens"].cumsum()
+df["Cumulative %"] = (df["Cumulative Tokens"] / total_supply_tokens) * 100.0
 
 st.markdown("""
 <div class="success-box">
@@ -332,37 +338,41 @@ with col_center:
     generate = st.button("🚀 Generate Audit Report")
 # --- Audit Metrics ---
 
-def inflation_guard(df):
-    """Year-over-year inflation based on circulating supply."""
+def inflation_guard(df: pd.DataFrame) -> list:
+    """YoY inflation using tokens, aligned to spreadsheet logic."""
     inflation = []
     for year in range(1, 6):
         prev_idx = (year - 1) * 12
         curr_idx = year * 12
         if prev_idx >= len(df):
             break
-        prev_supply = df.loc[prev_idx, "Cumulative %"]
-        curr_supply = df.loc[curr_idx, "Cumulative %"] if curr_idx < len(df) else df["Cumulative %"].iloc[-1]
-        newly_released = curr_supply - prev_supply
+        prev_supply = df.loc[prev_idx, "Cumulative Tokens"]
+        curr_supply = df.loc[curr_idx, "Cumulative Tokens"] if curr_idx < len(df) else df["Cumulative Tokens"].iloc[-1]
         if prev_supply > 0:
-            rate = (newly_released / prev_supply) * 100
+            rate = ((curr_supply - prev_supply) / prev_supply) * 100.0
         else:
-            rate = newly_released
+            rate = curr_supply
         inflation.append(round(rate, 2))
     return inflation
 
-def shock_stopper(df):
+def shock_stopper(df: pd.DataFrame) -> dict:
+    supply_shock = calculate_monthly_supply_shock(df)
     return {
-        "0–5%": df[(df["Monthly Release %"] <= 5)].shape[0],
-        "5–10%": df[(df["Monthly Release %"] > 5) & (df["Monthly Release %"] <= 10)].shape[0],
-        "10–15%": df[(df["Monthly Release %"] > 10) & (df["Monthly Release %"] <= 15)].shape[0],
-        "15%+": df[df["Monthly Release %"] > 15].shape[0]
+        "0–5%": int((supply_shock <= 5).sum()),
+        "5–10%": int(((supply_shock > 5) & (supply_shock <= 10)).sum()),
+        "10–15%": int(((supply_shock > 10) & (supply_shock <= 15)).sum()),
+        "15%+": int((supply_shock > 15).sum()),
+        ">10% months": int((supply_shock > 10).sum()),
+        ">12% months": int((supply_shock > 12).sum()),
+        ">15% months": int((supply_shock > 15).sum()),
+        "% >10%": round((supply_shock > 10).sum() / len(df), 3),
     }
 
 def calculate_monthly_supply_shock(df: pd.DataFrame) -> pd.Series:
-    """Monthly inflation: new tokens in month / circulating at start of month."""
-    circulating_start = df['Cumulative %'].shift(1).fillna(0)
-    monthly_release = df['Monthly Release %']
-    supply_shock = (monthly_release / circulating_start.replace(0, pd.NA)).fillna(0) * 100
+    """Monthly supply shock using token units."""
+    prev_circ = df["Cumulative Tokens"].shift(1).fillna(0.0)
+    monthly_tokens = df["Monthly Release Tokens"]
+    supply_shock = monthly_tokens.divide(prev_circ.replace(0, pd.NA)).fillna(0) * 100.0
     return supply_shock.round(2)
 
 def governance_hhi(allocations):
@@ -372,14 +382,22 @@ def governance_hhi(allocations):
     return round(hhi, 3)
 
 def liquidity_shield(total_supply, tge_price, liquidity_usd, allocations, vesting):
-    tge_percent = sum([allocations[p] * (vesting[p]["tge"] / 100) for p in allocations if p in vesting])
-    tokens_at_tge = total_supply * (tge_percent / 100)
-    market_cap_at_tge = tokens_at_tge * tge_price
-    return round(liquidity_usd / market_cap_at_tge, 2) if market_cap_at_tge > 0 else 0
+    sellable_tge_percent = sum(
+        allocations[p] * (vesting[p]["tge"] / 100.0)
+        for p in allocations
+        if p in vesting and vesting[p].get("sellable")
+    )
+    tokens_sellable_at_tge = total_supply * (sellable_tge_percent / 100.0)
+    market_cap_at_tge = tokens_sellable_at_tge * tge_price
+    return round(liquidity_usd / market_cap_at_tge, 2) if market_cap_at_tge > 0 else 0.0
 
-def lockup_ratio(vesting):
-    locked = sum([1 for p in vesting if vesting[p]["cliff"] >= 12])
-    return round(locked / len(vesting), 2)
+def lockup_ratio(vesting, allocations):
+    locked_percent = sum(
+        allocations[p]
+        for p in vesting
+        if vesting[p]["cliff"] is not None and vesting[p]["cliff"] >= 12
+    )
+    return round(locked_percent / 100.0, 2)
 
 def vc_dominance(allocations, tags):
     return round(sum([allocations[p] for p in allocations if tags.get(p) == "VC"]) / 100, 2)
@@ -388,9 +406,9 @@ def community_index(allocations, tags):
     return round(sum([allocations[p] for p in allocations if tags.get(p) == "Community"]) / 100, 2)
 
 def emission_taper(df):
-    first_12m = df.loc[0:11, "Monthly Release %"].sum()
-    last_12m = df["Monthly Release %"].tail(12).sum()
-    return round(first_12m / last_12m if last_12m > 0 else 0, 2)
+    first_12 = df.loc[0:11, "Monthly Release Tokens"].sum()
+    last_12 = df["Monthly Release Tokens"].tail(12).sum()
+    return round(first_12 / last_12 if last_12 > 0 else 0.0, 2)
 
 # --- Monte Carlo Simulation for Survivability ---
 def monte_carlo_simulation(df, user_base, growth, months, category, total_supply, tge_price):
@@ -436,7 +454,7 @@ if generate:
     shock = shock_stopper(df)
     hhi = governance_hhi(allocations)
     shield = liquidity_shield(total_supply_tokens, tge_price, liquidity_fund, allocations, vesting_schedule)
-    lock = lockup_ratio(vesting_schedule)
+    lock = lockup_ratio(vesting_schedule, allocations)
     vc = vc_dominance(allocations, tags)
     community = community_index(allocations, tags)
     taper = emission_taper(df)
