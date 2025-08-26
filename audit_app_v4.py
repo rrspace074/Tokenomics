@@ -157,10 +157,11 @@ st.markdown("""
     .success-box {
         background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
         color: white;
-        padding: 1rem;
+        padding: 0.6rem 0.8rem;
         border-radius: 10px;
         text-align: center;
-        font-weight: bold;
+        font-weight: 700;
+        font-size: 0.95rem;
     }
     
     .warning-box {
@@ -277,11 +278,9 @@ if len(pools) > 0:
         with col6:
             vesting = st.number_input("", 0, 72, 12, key=f"vesting_{i}")
         with col7:
-            # Automatically determine sellable at TGE based on TGE unlock percentage
-            sellable = tge > 0
-            sellable_text = "✅ Yes" if sellable else "❌ No"
-            color_code = "#28a745" if sellable else "#dc3545"
-            st.markdown(f"<div style='text-align: center; color: {color_code}; font-weight: bold;'>{sellable_text}</div>", unsafe_allow_html=True)
+            # Manual selection, independent of TGE %
+            sellable_choice = st.selectbox("", ["Yes", "No"], key=f"sellable_{i}")
+            sellable = sellable_choice == "Yes"
         
         vesting_schedule[pool] = {"cliff": cliff, "vesting": vesting, "tge": tge, "sellable": sellable}
     
@@ -326,14 +325,28 @@ st.markdown("""
     ✅ Vesting schedule processed successfully.
 </div>
 """, unsafe_allow_html=True)
+
+# Place the Generate button centered below the green success box
+col_left, col_center, col_right = st.columns([4, 2, 4])
+with col_center:
+    generate = st.button("🚀 Generate Audit Report")
 # --- Audit Metrics ---
 
 def inflation_guard(df):
+    """Year-over-year inflation based on circulating supply."""
     inflation = []
     for year in range(1, 6):
-        prev = df.loc[(year - 1) * 12, "Cumulative %"] if (year - 1) * 12 < len(df) else 0
-        curr = df.loc[year * 12, "Cumulative %"] if year * 12 < len(df) else df["Cumulative %"].iloc[-1]
-        rate = ((curr - prev) / max(prev, 1)) * 100
+        prev_idx = (year - 1) * 12
+        curr_idx = year * 12
+        if prev_idx >= len(df):
+            break
+        prev_supply = df.loc[prev_idx, "Cumulative %"]
+        curr_supply = df.loc[curr_idx, "Cumulative %"] if curr_idx < len(df) else df["Cumulative %"].iloc[-1]
+        newly_released = curr_supply - prev_supply
+        if prev_supply > 0:
+            rate = (newly_released / prev_supply) * 100
+        else:
+            rate = newly_released
         inflation.append(round(rate, 2))
     return inflation
 
@@ -345,9 +358,18 @@ def shock_stopper(df):
         "15%+": df[df["Monthly Release %"] > 15].shape[0]
     }
 
+def calculate_monthly_supply_shock(df: pd.DataFrame) -> pd.Series:
+    """Monthly inflation: new tokens in month / circulating at start of month."""
+    circulating_start = df['Cumulative %'].shift(1).fillna(0)
+    monthly_release = df['Monthly Release %']
+    supply_shock = (monthly_release / circulating_start.replace(0, pd.NA)).fillna(0) * 100
+    return supply_shock.round(2)
+
 def governance_hhi(allocations):
-    shares = [v / 100 for v in allocations.values()]
-    return round(sum([(s * 100) ** 2 for s in shares]) / 10000, 3)
+    """HHI in [0,1] as sum of squared decimal shares."""
+    shares_decimal = [v / 100 for v in allocations.values()]
+    hhi = sum([s ** 2 for s in shares_decimal])
+    return round(hhi, 3)
 
 def liquidity_shield(total_supply, tge_price, liquidity_usd, allocations, vesting):
     tge_percent = sum([allocations[p] * (vesting[p]["tge"] / 100) for p in allocations if p in vesting])
@@ -367,29 +389,35 @@ def community_index(allocations, tags):
 
 def emission_taper(df):
     first_12m = df.loc[0:11, "Monthly Release %"].sum()
-    last_12m = df.loc[-12:, "Monthly Release %"].sum()
-    return round(first_12m / last_12m if last_12m else 0, 2)
+    last_12m = df["Monthly Release %"].tail(12).sum()
+    return round(first_12m / last_12m if last_12m > 0 else 0, 2)
 
 # --- Monte Carlo Simulation for Survivability ---
-def monte_carlo_simulation(df, user_base, growth, months, category):
+def monte_carlo_simulation(df, user_base, growth, months, category, total_supply, tge_price):
+    """Simplified price survivability simulation with monthly compounding and dynamic price."""
     if category == "Gaming":
-        arpu = 76 * 12 * 0.03
+        arpu_monthly = (76 / 12) * 0.03
     elif category == "DeFi":
-        arpu = 3300 * 0.03
+        arpu_monthly = (3300 / 12) * 0.03
     elif category == "NFT":
-        arpu = 59 * 0.03
+        arpu_monthly = (59 / 12) * 0.03
     else:
-        arpu = 50
+        arpu_monthly = (50 / 12) * 0.03
 
     simulations = []
     for _ in range(100):
-        price = 1.0
+        price = tge_price
         for m in range(min(months, len(df))):
-            users = user_base * ((1 + growth) ** (m / 12))
-            buy_pressure = users * arpu
-            sell_pressure = df.loc[m, "Monthly Release %"] * total_supply_tokens * tge_price
-            price_change = (buy_pressure - sell_pressure) / max(sell_pressure, 1)
-            price *= (1 + price_change * 0.01)
+            users = user_base * ((1 + growth) ** m)
+            buy_pressure = users * arpu_monthly
+            tokens_released = (df.loc[m, "Monthly Release %"] / 100) * total_supply
+            sell_pressure = tokens_released * price
+            net_pressure = buy_pressure - sell_pressure
+            price_change_factor = (net_pressure / sell_pressure) if sell_pressure > 0 else 0
+            sensitivity = 0.1
+            price *= (1 + price_change_factor * sensitivity)
+            if price < 0.0001:
+                price = 0.0001
         simulations.append(price)
     return simulations
 
@@ -403,7 +431,7 @@ def game_theory_audit(hhi, shield, inflation):
     if inflation[2] <= 50: score += 1
     label = "Excellent" if score >= 4 else "Moderate" if score == 3 else "Needs Improvement"
     return label, score
-if st.button("🚀 Generate Audit Report"):
+if generate:
     inflation = inflation_guard(df)
     shock = shock_stopper(df)
     hhi = governance_hhi(allocations)
@@ -412,7 +440,7 @@ if st.button("🚀 Generate Audit Report"):
     vc = vc_dominance(allocations, tags)
     community = community_index(allocations, tags)
     taper = emission_taper(df)
-    monte = monte_carlo_simulation(df, user_base, user_growth_rate, 24, project_type)
+    monte = monte_carlo_simulation(df, user_base, user_growth_rate, 24, project_type, total_supply_tokens, tge_price)
     game_label, game_score = game_theory_audit(hhi, shield, inflation)
 
     # Game Theory Audit Metric with TDeFi styling
@@ -454,6 +482,29 @@ if st.button("🚀 Generate Audit Report"):
         ax3.set_facecolor('#f8f9fa')
         ax3.grid(True, alpha=0.3)
         st.pyplot(fig3)
+
+    # Monthly Supply Shock chart (bar graph of first 5 months excluding month 1/TGE)
+    try:
+        df['Supply Shock %'] = calculate_monthly_supply_shock(df)
+        shocks = df.loc[1:5, ['Month', 'Supply Shock %']].copy()  # months 1..5 → excluding month 0
+        fig_shock, ax_shock = plt.subplots(figsize=(10, 4))
+        x_labels = [f"M{int(m)}" for m in shocks['Month']]
+        values = shocks['Supply Shock %'].tolist()
+        bars = ax_shock.bar(x_labels, values, color='#4285F4')
+        ax_shock.set_title("Major Supply Shocks", fontweight='bold', color='#6c757d')
+        ax_shock.set_xlabel("")
+        ax_shock.set_ylabel("%")
+        max_val = max(values) if values else 0
+        y_max = max_val * 1.12 if max_val > 0 else 1
+        ax_shock.set_ylim(0, y_max)
+        for idx, val in enumerate(values):
+            # place label slightly inside the bar top to avoid clipping
+            y_pos = val - (max_val * 0.04 if val > 0 else 0.05)
+            y_pos = max(y_pos, val * 0.6)
+            ax_shock.text(idx, y_pos, f"{val:.2f}%", ha='center', va='bottom', fontsize=10, color='white' if val > (0.25 * y_max) else 'black')
+        st.pyplot(fig_shock)
+    except Exception:
+        pass
 
     # GPT prompt
     api_key = get_openai_api_key()
