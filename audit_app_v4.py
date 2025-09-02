@@ -902,7 +902,11 @@ A common pitfall is decoupling emissions from real demand. When supply outpaces 
     for para in tdefi_note.split("\n\n"):
         write_multiline(para)
 
-    pdf_bytes = pdf.output(dest="S").encode("latin-1", "ignore")
+    out = pdf.output(dest="S")
+    if isinstance(out, (bytes, bytearray)):
+        pdf_bytes = bytes(out)
+    else:
+        pdf_bytes = out.encode("latin-1", "ignore")
 
     st.markdown("""
     <div style="text-align: center; margin: 1.2rem 0;">
