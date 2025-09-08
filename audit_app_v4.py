@@ -778,33 +778,94 @@ if generate:
 
     with st.spinner("🤖 AI is analyzing your tokenomics..."):
         analysis_prompt = f"""
-You are a senior tokenomics analyst. Use the JSON metrics below as ground truth.
-Do not invent numbers; interpret what you see. Keep it concise, institutional, and punchy.
+ROLE
+You are a senior tokenomics analyst. Use ONLY the JSON provided in <metrics>. Do not invent values, ranges, or labels. Keep it concise, institutional, and punchy.
 
+INPUT
 <metrics>
 {json.dumps(metrics, indent=2)}
 </metrics>
 
-For each metric, follow this format:
-1) State the actual metric value(s).
-2) Interpret: risk if high, strength if low.
-3) Likely impact on price behavior and investor perception.
+STYLE RULES
+- For each metric: start with a one-line purpose, then present “STAT — Impact” lines.
+- Prefer clauses over sentences; strip filler; avoid definitions except the one-liner.
+- If a value is missing in JSON, omit that line entirely (do not guess).
+- Rounding: percentages to 0 decimals (use 1 decimal if <1% or for ratios where needed); ratios as % when natural (e.g., Liquidity Shield).
 
-Metrics:
-- 🟠 YoY Inflation (Y1–Y6)
-- 🔴 Supply Shock bins (0–5%, 5–10%, 10–15%, 15%+) and % months >10%
-- 🟡 Governance HHI
-- 🔵 Liquidity Shield Ratio
-- 🔒 Lockup Ratio (Supply share ≥12m and Pool share ≥12m)
-- 💼 VC Dominance (%)
-- 👥 Community Control Index (%)
-- 📉 Emission Taper (first 12m / last 12m)
-- 🎲 Monte Carlo Survivability (min, p25, median, p75, p90, max)
-- 🧠 Game Theory Score (0–5) and what it suggests about design resilience
+OUTPUT FORMAT
+For each metric below (only if present in JSON), produce exactly:
+1) One-line purpose (what this metric captures, in simple terms).
+2) STAT — Impact (risk if high, strength if low), grounded strictly in the numbers.
+3) Price/Investor — 1 line on likely price behavior and how investors will read it.
 
-Guidelines:
-- Avoid definitions; jump to insight.
-- Prefer bullets, short lines, and direct language.
+METRICS (purpose + interpretation cues)
+1) YoY Inflation (Y1–Y6)
+   Purpose: Year-over-year growth in circulating supply across first six years.
+   STAT: “Y1–Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — <front-loaded/moderate/back-loaded> inflation profile.”
+   Impact cues: Higher early-year inflation = near-term sell pressure; tapering across years = improving overhang.
+
+2) Supply Shock bins (0–5%, 5–10%, 10–15%, 15%+) and % months >10%
+   Purpose: Magnitude and frequency of monthly unlocks; concentration signals cliffs.
+   STAT: “0–5%: <m0-5> | 5–10%: <m5-10> | 10–15%: <m10-15> | 15%+: <m15p>; >10% months: <share>% — <diffuse/concentrated> release profile.”
+   Impact cues: Months >10% are shock months; more 10–15%/15%+ = volatility clusters around unlocks.
+
+3) Governance HHI
+   Purpose: Ownership concentration; higher = centralization risk.
+   STAT: “HHI: <hhi> — <low/moderate/high> concentration.”
+   Impact cues (apply categorization using value): <0.15 decentralized; 0.15–0.25 moderate; >0.25 centralized risk.
+
+4) Liquidity Shield Ratio
+   Purpose: Liquidity funds vs. sellable token value at launch; <100% = weak defense.
+   STAT: “Shield: <ratio>% — <below/at/above> 100% coverage.”
+   Impact cues: <100% = fragile against sell pressure; ≥100% = absorbable supply at TGE.
+
+5) Lockup Ratio (Supply share ≥12m and Pool share ≥12m)
+   Purpose: Share of supply/pools locked ≥12 months; reduces near-term float.
+   STAT: “Supply ≥12m: <slock>% | Pool ≥12m: <plock>% — <tight/loose> free-float path.”
+   Impact cues: Higher lockups dampen early volatility; low lockups raise overhang risk.
+
+6) VC Dominance (%)
+   Purpose: Share held by VC-linked pools; governance and exit-overhang risk if high.
+   STAT: “VC: <vc>% — <elevated/modest> sponsor control.”
+   Impact cues: High VC share = governance sway and potential coordinated supply.
+
+7) Community Control Index (%)
+   Purpose: Share controlled/earned by community pools; alignment and decentralization if high.
+   STAT: “Community: <comm>% — <strong/weak> user alignment.”
+   Impact cues: Higher = healthier network effects and governance legitimacy.
+
+8) Emission Taper (first 12m / last 12m)
+   Purpose: Front- vs. back-loaded emissions; >1 means earlier sell pressure.
+   STAT: “Taper: <taper>x — <front-loaded/balanced/back-loaded> schedule.”
+   Impact cues: Larger >1 = early overhang; <1 = deferred pressure with longer runway.
+
+9) Monte Carlo Survivability (min, p25, median, p75, p90, max)
+   Purpose: Simulated buy-pressure vs. release stress; distribution of resilience.
+   STAT: “Survivability (min/p25/med/p75/p90/max): <min>/<p25>/<med>/<p75>/<p90>/<max> — <fragile/middle-of-pack/resilient> median.”
+   Impact cues: Higher median and upper tail = better probability of withstanding unlocks.
+
+10) Game Theory Score (0–5)
+    Purpose: Incentive robustness; higher = fewer exploit paths and better behavioral alignment.
+    STAT: “GT Score: <gt>/5 — <robust/average/fragile> incentive design.”
+    Impact cues: Low scores imply leakage/griefing risk; high scores support durable adoption.
+
+PRICE/INVESTOR LINE (for each metric)
+- Begin with “Price/Investor —” and state a single concise read-through (volatility, overhang, rerating potential, governance discount/premium, etc.) based strictly on the STAT above.
+
+TONE
+- Write in crisp clauses using em dashes and semicolons sparingly. No hedging. No emojis.
+
+MISSING DATA
+- If a metric or sub-value is absent in JSON, omit it without comment.
+
+EXAMPLE PATTERN (do NOT fabricate numbers; this shows form only)
+YoY Inflation — Year-over-year growth in circulating supply across first six years.
+Y1–Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — front-loaded taper.
+Price/Investor — Early overhang; volatility eases as taper sets in.
+
+Supply Shock — Distribution of monthly release magnitudes; concentration signals cliffs.
+0–5%: <a> | 5–10%: <b> | 10–15%: <c> | 15%+: <d>; >10% months: <e>% — concentrated shocks.
+Price/Investor — Expect event-driven drawdowns around large unlocks; premiums compress into those windows.
         """.strip()
 
         response = client.chat.completions.create(
