@@ -790,13 +790,14 @@ STYLE RULES
 - If any value is missing in JSON, omit that line. Do not mention missing data.
 - Rounding: % to 0 decimals (use 1 decimal if <1% or when a ratio needs it). Show ratios as % when natural (e.g., Liquidity Shield).
 - Tone: direct, neutral, no emojis.
+- The last explainer paragraph MUST be a single bullet starting with "- " (not a paragraph).
+- In the Purpose line, make the subtitle (the phrase after the dash) **bold** in Markdown.
 
 OUTPUT FORMAT (apply ONLY to metrics present in JSON)
-1) Purpose — one line describing what the metric captures.
+1) Purpose — one line describing what the metric captures. Make the subtitle **bold** in Markdown.
 2) STAT — Impact — one line with the numbers and a plain interpretation (what high/low means).
 3) Price/Investor — 2–4 short sentences: what usually happens to price; how investors read the number; when the effect shows; what to watch.
-4) (No label) — 2–4 short sentences in simple language: what it measures, why high/low matters, and one concrete action.
-5) output should be structured with bullet points not in paragraphs. 
+4) (No label) — Write as a SINGLE bullet line starting with "- ": 2–4 short sentences in simple language: what it measures, why high/low matters, and one concrete action.
 
 METRICS (with simple impact cues)
 
@@ -860,7 +861,7 @@ PRICE/INVESTOR LINE (simple, required)
   * One watch item (e.g., “watch months above 10%”, “watch HHI near 0.25”).
 
 UNLABELED EXPLAINER (required)
-- Do NOT add any label. Write 2–4 short sentences:
+- Output a SINGLE bullet beginning with "- ". Write 2–4 short sentences:
   * What the number measures in everyday terms.
   * Why higher or lower matters.
   * One simple action to consider (e.g., spread unlocks, add liquidity, communicate unlock calendar).
@@ -868,21 +869,21 @@ UNLABELED EXPLAINER (required)
 MISSING DATA
 - If a metric or sub-value is absent in JSON, omit that metric or sub-line without comment.
 
-EXAMPLE PATTERN (formate only; do NOT invent numbers)
-YoY Inflation — Year-over-year growth in circulating supply across the first six years.
+EXAMPLE PATTERN (format only; do NOT invent numbers)
+YoY Inflation — **Year-over-year growth in circulating supply across the first six years.**
 Y1–Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — front-loaded.
 
 Price/Investor — More new tokens arrive early, so prices can swing or dip in the first years. As annual growth slows, price moves often calm down. Many investors wait for the slow-down before paying higher prices. Watch the Y1–Y2 values.
 
 - More tokens come into the market in the beginning. If many holders sell, price can fall. Later, fewer new tokens arrive, which helps price hold steady. Plan communication and liquidity for the early years.
 
-Supply Shock — Size and frequency of monthly unlocks.
+Supply Shock — **Size and frequency of monthly unlocks.**
 0–5%: <a> | 5–10%: <b> | 10–15%: <c> | 15%+: <d>; >10% months: <e>% — concentrated.
 
 Price/Investor — Large unlock months often pull price down near those dates. Many investors wait until after big unlocks to buy. Expect tighter pricing into unlock weeks. Watch the count of months above 10%.
 
 - When a lot of tokens unlock at once, more people can sell at the same time. That can push price down for a while. Spreading unlocks or adding more liquidity can soften the drop.
-        """.strip()
+""".strip()
 
         response = client.chat.completions.create(
             model="gpt-4o",
@@ -1025,9 +1026,10 @@ Price/Investor — Large unlock months often pull price down near those dates. M
     def render_structured_summary(pdf: FPDF, summary_text: str, effective_page_width: float, base_font_size: int = 11):
         """
         Renders the AI summary preserving structure:
-        - Headings like 'YoY Inflation — ...' become bold titles (with emojis if available) + italic subtitle.
+        - Headings like 'YoY Inflation — ...' become bold titles (with emojis if available) + BOLD subtitle.
         - Lines beginning with 'Price/Investor —' are emphasized and placed on a new line.
         - Lines starting with '- ' are bullets (kept).
+        - Immediately after any 'Price/Investor —' line, the next non-empty, non-header line is auto-prefixed with '- ' if missing.
         - Remaining lines are paragraphs.
         """
         BULLET = "\xb7"  # latin-1 safe bullet
@@ -1035,7 +1037,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
         line_h = 7
 
         def _strip_leading_bullets(s: str) -> str:
-            # Remove any leading bullet markers and surrounding spaces: -, *, •, ·
+            # Remove any leading bullet markers when we intentionally need plain text
             return re.sub(r'^[\s\-\*•·]+', '', s or '').strip()
 
         def _split_title_subtitle(s: str, section_names: list[str]) -> tuple[str, str] | None:
@@ -1045,24 +1047,23 @@ Price/Investor — Large unlock months often pull price down near those dates. M
             Returns (title, subtitle) or None if not a section header.
             """
             raw = s.strip()
-            # If raw begins with a known title, try multiple separators
             for name in section_names:
                 if raw.lower().startswith(name.lower()):
                     rest = raw[len(name):].lstrip()
                     if not rest:
                         return (name, "")
-                    # Strip common separators
                     rest = re.sub(r'^(—|–|-|:)\s*', '', rest)
-                    # If still begins with multiple spaces, treat as separator
                     rest = re.sub(r'^\s{2,}', '', rest)
                     return (name, rest)
-            # If it contains a dash separator like "Title — subtitle"
-            m = re.match(r'^(.+?)\s*[—–-]\s*(.+)$', raw)
+            m = re.match(r'^(.*?):\s*(.+)$', raw)
+            if m and any(raw.lower().startswith(n.lower()) for n in section_names):
+                return (m.group(1).strip(), m.group(2).strip())
+            m = re.match(r'^(.*?)\s*[—–-]\s*(.+)$', raw)
             if m and any(raw.lower().startswith(n.lower()) for n in section_names):
                 return (m.group(1).strip(), m.group(2).strip())
             return None
 
-        # Optionally switch to a Unicode font so emojis render
+        # Switch to a Unicode font so emojis render when available
         if UNICODE_FONT:
             try:
                 pdf.add_font("DejaVu", "", UNICODE_FONT, uni=True)
@@ -1073,7 +1074,8 @@ Price/Investor — Large unlock months often pull price down near those dates. M
             pdf.set_font("Arial", "", base_font_size)
 
         lines = normalize_ai_summary(summary_text).splitlines()
-        lines = [ _strip_leading_bullets(x) for x in lines ]
+        # DO NOT strip bullets globally; we want to preserve leading '-' so our bullet renderer can detect them.
+
         SECTION_TITLES = [
             "YoY Inflation",
             "Supply Shock bins",
@@ -1086,31 +1088,39 @@ Price/Investor — Large unlock months often pull price down near those dates. M
             "Monte Carlo Survivability",
             "Game Theory Score",
         ]
-        for raw in lines:
+
+        make_next_line_bullet = False
+
+        for idx, raw in enumerate(lines):
             line = raw.strip()
             if not line:
                 continue
 
-            # Try to parse known section headers first (works for both "· YoY Inflation  ..." and "YoY Inflation — ...")
+            # If the previous line was 'Price/Investor —', enforce the next substantive line as a bullet
+            if make_next_line_bullet:
+                low = line.lower()
+                is_header_start = any(line.lower().startswith(n.lower()) for n in SECTION_TITLES)
+                if not (line.startswith("-") or low.startswith("stat") or low.startswith("price/investor") or is_header_start):
+                    raw = "- " + line
+                    line = raw
+                make_next_line_bullet = False
+
+            # Section header with subtitle (bold subtitle)
             split = _split_title_subtitle(line, SECTION_TITLES)
             if split is not None:
                 title, subtitle = split
-                pdf.ln(3)  # slightly more breathing room before each section
-                # Render section title centered, larger & bold
+                pdf.ln(3)
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "", base_font_size + 4)
                 else:
                     pdf.set_font("Arial", "B", base_font_size + 3)
-                # Use a single-line centered cell for stable alignment
                 pdf.cell(0, line_h + 2, sanitize_text(title_with_emoji(strip_md(title)).strip()), ln=True, align="C")
-                # Subtitle (smaller / italic style), left aligned
                 if subtitle:
                     if UNICODE_FONT:
-                        pdf.set_font("DejaVu", "", base_font_size)
+                        pdf.set_font("DejaVu", "B", base_font_size)
                     else:
-                        pdf.set_font("Arial", "I", base_font_size)
+                        pdf.set_font("Arial", "B", base_font_size)
                     pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(subtitle).strip()), align='L')
-                # Reset body font
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "", base_font_size)
                 else:
@@ -1118,7 +1128,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                 pdf.ln(1)
                 continue
 
-            # If a line is a "STAT ..." or "Price/Investor ..." bullet, emphasize it without bullets
+            # STAT line (bold)
             if line.upper().startswith("STAT"):
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "", base_font_size)
@@ -1132,6 +1142,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                 pdf.ln(0.5)
                 continue
 
+            # Price/Investor line (italic) and set flag for next bullet
             if line.lower().startswith("price/investor"):
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "I", base_font_size)
@@ -1143,12 +1154,13 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                 pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(line)))
                 pdf.set_xy(pdf.l_margin, pdf.get_y())
                 pdf.ln(0.5)
+                make_next_line_bullet = True
                 continue
 
-            # Generic bullets (retain bullets for body, but never for section headers)
-            m_bullet = re.match(r'^([\-\*•·]+)\s+(.*)$', raw)
+            # Bullet lines: keep as bullets and render with middot
+            m_bullet = re.match(r'^[\-\*•·]+\s+(.*)$', raw)
             if m_bullet:
-                content = m_bullet.group(2).strip()
+                content = m_bullet.group(1).strip()
                 rest = strip_md(content)
                 bullet_text = f"{BULLET} {rest}"
                 left_margin = pdf.l_margin + 4
@@ -1159,9 +1171,9 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                 pdf.ln(0.5)
                 continue
 
-            # Fallback: handle "Title — subtitle" if not caught earlier
-            if "—" in line and any(line.lower().startswith(n.lower()) for n in SECTION_TITLES):
-                parts = [p.strip() for p in line.split("—", 1)]
+            # Fallback: handle "Title — subtitle" if not caught earlier (bold subtitle)
+            if ("—" in line or "-" in line) and any(line.lower().startswith(n.lower()) for n in SECTION_TITLES):
+                parts = re.split(r"\s*[—–-]\s*", line, maxsplit=1)
                 if len(parts) == 2:
                     title = title_with_emoji(strip_md(parts[0]))
                     subtitle = strip_md(parts[1])
@@ -1170,13 +1182,12 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                         pdf.set_font("DejaVu", "", base_font_size + 4)
                     else:
                         pdf.set_font("Arial", "B", base_font_size + 3)
-                    # Center the title using single-line cell
                     pdf.cell(0, line_h + 2, sanitize_text(title).strip(), ln=True, align="C")
                     if subtitle:
                         if UNICODE_FONT:
-                            pdf.set_font("DejaVu", "", base_font_size)
+                            pdf.set_font("DejaVu", "B", base_font_size)
                         else:
-                            pdf.set_font("Arial", "I", base_font_size)
+                            pdf.set_font("Arial", "B", base_font_size)
                         pdf.multi_cell(effective_page_width, line_h, sanitize_text(subtitle).strip(), align='L')
                     if UNICODE_FONT:
                         pdf.set_font("DejaVu", "", base_font_size)
@@ -1185,9 +1196,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                     pdf.ln(1)
                     continue
 
-            # Price/Investor emphasis (already handled above)
-
-            # Generic non-bullet fallback paragraph
+            # Generic paragraph
             pdf.set_x(pdf.l_margin)
             pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(line)))
             pdf.ln(1)
