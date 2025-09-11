@@ -1165,6 +1165,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                     pdf.set_font("DejaVu", "I", base_font_size)
                 else:
                     pdf.set_font("Arial", "I", base_font_size)
+                pdf.set_x(pdf.l_margin)
                 pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(line)))
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "", base_font_size)
@@ -1176,6 +1177,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
             # Generic non-bullet fallback paragraph
             
             # Fallback paragraph
+            pdf.set_x(pdf.l_margin)
             pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(line)))
             pdf.ln(1)
 
@@ -1224,7 +1226,9 @@ Price/Investor — Large unlock months often pull price down near those dates. M
     for title, fig_path in figs:
         pdf.set_font("Arial", "B", 11)
         pdf.multi_cell(0, 7, sanitize_text(title))
-        pdf.image(fig_path, x=10, w=180)
+        # Fit figure to content width inside margins
+        fig_width = pdf.w - pdf.l_margin - pdf.r_margin
+        pdf.image(fig_path, x=pdf.l_margin, w=fig_width)
         pdf.ln(5)
 
     pdf.ln(4)
@@ -1238,6 +1242,7 @@ Designing for Demand, Not Just Distribution
 A common pitfall is decoupling emissions from real demand. When supply outpaces utility, it triggers sell pressure and a negative flywheel. Our approach ties token releases to verifiable demand — active users, protocol revenue, and ecosystem participation — rewarding value creation, not just speculation.
 """.strip()
     for para in tdefi_note.split("\n\n"):
+        pdf.set_x(pdf.l_margin)
         pdf.multi_cell(effective_page_width, 8, sanitize_text(para))
         pdf.ln(1)
 
