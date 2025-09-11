@@ -967,8 +967,31 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                     self.image(self.logo_path, x=x_pos, y=8, w=logo_w)
                 except Exception:
                     pass
-            # Small spacer to separate header from body
-            self.ln(8)
+            # First page: centered title
+            if self.page_no() == 1:
+                try:
+                    if UNICODE_FONT:
+                        self.add_font("DejaVu", "", UNICODE_FONT, uni=True)
+                        self.set_font("DejaVu", "", 16)
+                    else:
+                        self.set_font("Arial", "B", 16)
+                except Exception:
+                    self.set_font("Arial", "B", 16)
+                self.set_y(10)
+                self.cell(0, 10, sanitize_text("Tokenomics Audit Report"), ln=True, align="C")
+                # Optional small project name under title
+                try:
+                    if UNICODE_FONT:
+                        self.set_font("DejaVu", "", 11)
+                    else:
+                        self.set_font("Arial", "I", 11)
+                except Exception:
+                    self.set_font("Arial", "I", 11)
+                self.cell(0, 7, sanitize_text(project_name), ln=True, align="C")
+                self.ln(2)
+            else:
+                # Small spacer to separate header from body on subsequent pages
+                self.ln(8)
 
         def footer(self):
             self.set_y(-15)
@@ -1019,10 +1042,94 @@ Price/Investor — Large unlock months often pull price down near those dates. M
             pdf.set_font("Arial", "", base_font_size)
 
         lines = normalize_ai_summary(summary_text).splitlines()
+        SECTION_TITLES = [
+            "YoY Inflation",
+            "Supply Shock bins",
+            "Governance HHI",
+            "Liquidity Shield Ratio",
+            "Lockup Ratio",
+            "VC Dominance",
+            "Community Control Index",
+            "Emission Taper",
+            "Monte Carlo Survivability",
+            "Game Theory Score",
+        ]
         for raw in lines:
             line = raw.strip()
             if not line:
                 continue
+
+            # Normalize optional leading dash bullets for detection
+            if line.startswith("- "):
+                content = line[2:].strip()
+                # a) Section heading bullet: starts with known title
+                for name in SECTION_TITLES:
+                    if content.lower().startswith(name.lower()):
+                        rest = content[len(name):].strip()
+                        # Allow separators like em-dash, hyphen, colon, or double-space
+                        rest = re.sub(r'^(—|–|-|:)?\s*', '', rest)
+                        title = title_with_emoji(strip_md(name))
+                        subtitle = strip_md(rest)
+
+                        pdf.ln(2)
+                        if UNICODE_FONT:
+                            pdf.set_font("DejaVu", "", base_font_size + 3)
+                        else:
+                            pdf.set_font("Arial", "B", base_font_size + 2)
+                        pdf.multi_cell(effective_page_width, line_h + 1, sanitize_text(title))
+                        if subtitle:
+                            if UNICODE_FONT:
+                                pdf.set_font("DejaVu", "", base_font_size + 0)
+                            else:
+                                pdf.set_font("Arial", "I", base_font_size)
+                            pdf.multi_cell(effective_page_width, line_h, sanitize_text(subtitle))
+                        # Reset font for body
+                        if UNICODE_FONT:
+                            pdf.set_font("DejaVu", "", base_font_size)
+                        else:
+                            pdf.set_font("Arial", "", base_font_size)
+                        pdf.ln(1)
+                        # Move to next line
+                        break
+                else:
+                    # b) Special bullets: STAT and Price/Investor
+                    if content.upper().startswith("STAT"):
+                        if UNICODE_FONT:
+                            pdf.set_font("DejaVu", "", base_font_size)
+                        else:
+                            pdf.set_font("Arial", "B", base_font_size)
+                        left_margin = pdf.l_margin + 2
+                        cur_y = pdf.get_y()
+                        pdf.set_xy(left_margin, cur_y)
+                        pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(content)))
+                        pdf.set_xy(pdf.l_margin, pdf.get_y())
+                        pdf.ln(0.5)
+                        continue
+                    if content.lower().startswith("price/investor"):
+                        if UNICODE_FONT:
+                            pdf.set_font("DejaVu", "I", base_font_size)
+                        else:
+                            pdf.set_font("Arial", "I", base_font_size)
+                        left_margin = pdf.l_margin + 2
+                        cur_y = pdf.get_y()
+                        pdf.set_xy(left_margin, cur_y)
+                        pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(content)))
+                        pdf.set_xy(pdf.l_margin, pdf.get_y())
+                        pdf.ln(0.5)
+                        continue
+                    # c) Generic bullet
+                    m = re.match(r"^(\*\*(.+?)\*\*\s*:\s*)?(.*)$", content)
+                    if m:
+                        label = m.group(2)
+                        rest = strip_md(m.group(3) or "")
+                        bullet_text = f"{BULLET} {label}: {rest}" if label else f"{BULLET} {rest}"
+                        left_margin = pdf.l_margin + 4
+                        cur_y = pdf.get_y()
+                        pdf.set_xy(left_margin, cur_y)
+                        pdf.multi_cell(effective_page_width - 4, line_h, sanitize_text(bullet_text))
+                        pdf.set_xy(pdf.l_margin, pdf.get_y())
+                        pdf.ln(0.5)
+                        continue
 
             # Section heading pattern: "<Title> — <subtitle...>"
             if "—" in line and not line.startswith(("-", "Price/Investor")):
@@ -1066,20 +1173,8 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                 pdf.ln(1)
                 continue
 
-            # Bullet parsing: "- **Label:** rest" or generic "- text"
-            if line.startswith("-"):
-                m = re.match(r"^\-\s*(\*\*(.+?)\*\*\s*:\s*)?(.*)$", line)
-                if m:
-                    label = m.group(2)
-                    rest = strip_md(m.group(3) or "")
-                    bullet_text = f"{BULLET} {label}: {rest}" if label else f"{BULLET} {rest}"
-                    left_margin = pdf.l_margin + 4
-                    cur_y = pdf.get_y()
-                    pdf.set_xy(left_margin, cur_y)
-                    pdf.multi_cell(effective_page_width - 4, line_h, sanitize_text(bullet_text))
-                    pdf.set_xy(pdf.l_margin, pdf.get_y())
-                    continue
-
+            # Generic non-bullet fallback paragraph
+            
             # Fallback paragraph
             pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(line)))
             pdf.ln(1)
