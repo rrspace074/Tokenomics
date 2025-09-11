@@ -909,6 +909,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
         t = text or ""
         t = re.sub(r"\*\*(.+?)\*\*", r"\1", t)
         t = re.sub(r"`([^`]*)`", r"\1", t)
+        t = t.replace("**", "").replace("*", "") 
         return t.strip()
 
     def _find_logo_path():
