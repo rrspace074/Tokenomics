@@ -787,85 +787,100 @@ INPUT
 </metrics>
 
 STYLE RULES
-- For each metric: start with a one-line purpose, then present “STAT — Impact” lines.
-- Prefer clauses over sentences; strip filler; avoid definitions except the one-liner.
-- If a value is missing in JSON, omit that line entirely (do not guess).
-- Rounding: percentages to 0 decimals (use 1 decimal if <1% or for ratios where needed); ratios as % when natural (e.g., Liquidity Shield).
+- For each metric: one-line Purpose, then “STAT — Impact”, then “Price/Investor —”, then an unlabeled 2–4 sentence explainer.
+- Use short, clear sentences. Explain cause → effect. No buzzwords.
+  * Use: “more/fewer tokens released”, “more/less selling pressure”, “price may fall/rise”, “few holders/many holders”.
+  * Avoid: overhang, rerating, premium/discount, legitimacy, runway, cliffs (say “large unlock months”).
+- If any value is missing in JSON, omit that line. Do not mention missing data.
+- Rounding: % to 0 decimals (use 1 decimal if <1% or when a ratio needs it). Show ratios as % when natural (e.g., Liquidity Shield).
+- Tone: direct, neutral, no emojis.
 
-OUTPUT FORMAT
-For each metric below (only if present in JSON), produce exactly:
-1) One-line purpose (what this metric captures, in simple terms).
-2) STAT — Impact (risk if high, strength if low), grounded strictly in the numbers.
-3) Price/Investor — 1 line on likely price behavior and how investors will read it.
+OUTPUT FORMAT (apply ONLY to metrics present in JSON)
+1) Purpose — one line describing what the metric captures.
+2) STAT — Impact — one line with the numbers and a plain interpretation (what high/low means).
+3) Price/Investor — 2–4 short sentences: what usually happens to price; how investors read the number; when the effect shows; what to watch.
+4) (No label) — 2–4 short sentences in simple language: what it measures, why high/low matters, and one concrete action.
 
-METRICS (purpose + interpretation cues)
+METRICS (with simple impact cues)
+
 1) YoY Inflation (Y1–Y6)
-   Purpose: Year-over-year growth in circulating supply across first six years.
+   Purpose: Year-over-year growth in circulating supply across the first six years.
    STAT: “Y1–Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — <front-loaded/moderate/back-loaded> inflation profile.”
-   Impact cues: Higher early-year inflation = near-term sell pressure; tapering across years = improving overhang.
+   Impact cues: High in early years → more new tokens arrive early; later years lower → selling pressure usually eases over time.
 
 2) Supply Shock bins (0–5%, 5–10%, 10–15%, 15%+) and % months >10%
-   Purpose: Magnitude and frequency of monthly unlocks; concentration signals cliffs.
+   Purpose: Size and frequency of monthly unlocks.
    STAT: “0–5%: <m0-5> | 5–10%: <m5-10> | 10–15%: <m10-15> | 15%+: <m15p>; >10% months: <share>% — <diffuse/concentrated> release profile.”
-   Impact cues: Months >10% are shock months; more 10–15%/15%+ = volatility clusters around unlocks.
+   Impact cues: More months above 10% → price often weak near those months; more 10–15%/15%+ months → unlocks bunch up and can move price.
 
 3) Governance HHI
-   Purpose: Ownership concentration; higher = centralization risk.
+   Purpose: How concentrated token ownership is.
    STAT: “HHI: <hhi> — <low/moderate/high> concentration.”
-   Impact cues (apply categorization using value): <0.15 decentralized; 0.15–0.25 moderate; >0.25 centralized risk.
+   Categorize: <0.15 = many holders; 0.15–0.25 = mixed; >0.25 = few holders can decide.
+   Impact cues: Higher HHI → a small group can steer votes; lower HHI → decisions are spread out.
 
 4) Liquidity Shield Ratio
-   Purpose: Liquidity funds vs. sellable token value at launch; <100% = weak defense.
+   Purpose: Liquidity funds vs. sellable token value at launch.
    STAT: “Shield: <ratio>% — <below/at/above> 100% coverage.”
-   Impact cues: <100% = fragile against sell pressure; ≥100% = absorbable supply at TGE.
+   Impact cues: Below 100% → not enough buy support if many sell at launch; at/above 100% → selling is easier to absorb.
 
 5) Lockup Ratio (Supply share ≥12m and Pool share ≥12m)
-   Purpose: Share of supply/pools locked ≥12 months; reduces near-term float.
+   Purpose: Share of tokens and pools locked for at least 12 months.
    STAT: “Supply ≥12m: <slock>% | Pool ≥12m: <plock>% — <tight/loose> free-float path.”
-   Impact cues: Higher lockups dampen early volatility; low lockups raise overhang risk.
+   Impact cues: Higher lockups → fewer tokens can trade early → steadier price; lower lockups → more tokens can hit the market → choppier price.
 
 6) VC Dominance (%)
-   Purpose: Share held by VC-linked pools; governance and exit-overhang risk if high.
+   Purpose: Share held by venture/sponsor pools.
    STAT: “VC: <vc>% — <elevated/modest> sponsor control.”
-   Impact cues: High VC share = governance sway and potential coordinated supply.
+   Impact cues: Higher share → a few funds can influence votes and selling; lower share → less chance of large, coordinated sells.
 
 7) Community Control Index (%)
-   Purpose: Share controlled/earned by community pools; alignment and decentralization if high.
+   Purpose: Share held or earned by users/community pools.
    STAT: “Community: <comm>% — <strong/weak> user alignment.”
-   Impact cues: Higher = healthier network effects and governance legitimacy.
+   Impact cues: Higher share → users have more say and tend to stay engaged; lower share → weaker community voice.
 
 8) Emission Taper (first 12m / last 12m)
-   Purpose: Front- vs. back-loaded emissions; >1 means earlier sell pressure.
+   Purpose: Compare tokens released early vs. late.
    STAT: “Taper: <taper>x — <front-loaded/balanced/back-loaded> schedule.”
-   Impact cues: Larger >1 = early overhang; <1 = deferred pressure with longer runway.
+   Impact cues: >1 → more tokens released early → near-term pressure; <1 → more released later → early period calmer.
 
 9) Monte Carlo Survivability (min, p25, median, p75, p90, max)
-   Purpose: Simulated buy-pressure vs. release stress; distribution of resilience.
+   Purpose: Stress test: can typical buying absorb scheduled releases?
    STAT: “Survivability (min/p25/med/p75/p90/max): <min>/<p25>/<med>/<p75>/<p90>/<max> — <fragile/middle-of-pack/resilient> median.”
-   Impact cues: Higher median and upper tail = better probability of withstanding unlocks.
+   Impact cues: Higher median/upper values → more scenarios where price holds; lower values → more cases where releases are hard to absorb.
 
 10) Game Theory Score (0–5)
-    Purpose: Incentive robustness; higher = fewer exploit paths and better behavioral alignment.
+    Purpose: How hard it is to game the incentive design.
     STAT: “GT Score: <gt>/5 — <robust/average/fragile> incentive design.”
-    Impact cues: Low scores imply leakage/griefing risk; high scores support durable adoption.
+    Impact cues: Low score → people can game rewards or take value without helping; high score → rewards push people to help the network.
 
-PRICE/INVESTOR LINE (for each metric)
-- Begin with “Price/Investor —” and state a single concise read-through (volatility, overhang, rerating potential, governance discount/premium, etc.) based strictly on the STAT above.
+PRICE/INVESTOR LINE (simple, required)
+- Start with “Price/Investor —”.
+- Write 2–4 short sentences:
+  * Price effect (up/down/more swings/steadier) tied to the STAT.
+  * Investor read (more risk vs. less risk; faster to sell vs. likely to hold).
+  * Timing (now, near unlock months, later years).
+  * One watch item (e.g., “watch months above 10%”, “watch HHI near 0.25”).
 
-TONE
-- Write in crisp clauses using em dashes and semicolons sparingly. No hedging. No emojis.
+UNLABELED EXPLAINER (required)
+- Do NOT add any label. Write 2–4 short sentences:
+  * What the number measures in everyday terms.
+  * Why higher or lower matters.
+  * One simple action to consider (e.g., spread unlocks, add liquidity, communicate unlock calendar).
 
 MISSING DATA
-- If a metric or sub-value is absent in JSON, omit it without comment.
+- If a metric or sub-value is absent in JSON, omit that metric or sub-line without comment.
 
-EXAMPLE PATTERN (do NOT fabricate numbers; this shows form only)
-YoY Inflation — Year-over-year growth in circulating supply across first six years.
-Y1–Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — front-loaded taper.
-Price/Investor — Early overhang; volatility eases as taper sets in.
+EXAMPLE PATTERN (form only; do NOT invent numbers)
+YoY Inflation — Year-over-year growth in circulating supply across the first six years.
+Y1–Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — front-loaded.
+Price/Investor — More new tokens arrive early, so prices can swing or dip in the first years. As annual growth slows, price moves often calm down. Many investors wait for the slow-down before paying higher prices. Watch the Y1–Y2 values.
+More tokens come into the market in the beginning. If many holders sell, price can fall. Later, fewer new tokens arrive, which helps price hold steady. Plan communication and liquidity for the early years.
 
-Supply Shock — Distribution of monthly release magnitudes; concentration signals cliffs.
-0–5%: <a> | 5–10%: <b> | 10–15%: <c> | 15%+: <d>; >10% months: <e>% — concentrated shocks.
-Price/Investor — Expect event-driven drawdowns around large unlocks; premiums compress into those windows.
+Supply Shock — Size and frequency of monthly unlocks.
+0–5%: <a> | 5–10%: <b> | 10–15%: <c> | 15%+: <d>; >10% months: <e>% — concentrated.
+Price/Investor — Large unlock months often pull price down near those dates. Many investors wait until after big unlocks to buy. Expect tighter pricing into unlock weeks. Watch the count of months above 10%.
+When a lot of tokens unlock at once, more people can sell at the same time. That can push price down for a while. Spreading unlocks or adding more liquidity can soften the drop.
         """.strip()
 
         response = client.chat.completions.create(
@@ -888,14 +903,12 @@ Price/Investor — Expect event-driven drawdowns around large unlocks; premiums 
     # -----------------------------
     # PDF Report
     # -----------------------------
-    def clean_gpt_text(summary_text):
-        lines = (summary_text or "").splitlines()
-        formatted = []
-        for line in lines:
-            line = re.sub(r'^#+', '', line).strip()
-            line = re.sub(r'^[-*•]\\s+', '', line).strip()
-            if line: formatted.append(line)
-        return formatted
+    def strip_md(text: str) -> str:
+        """Remove basic markdown like **bold** and inline code."""
+        t = text or ""
+        t = re.sub(r"\*\*(.+?)\*\*", r"\1", t)
+        t = re.sub(r"`([^`]*)`", r"\1", t)
+        return t.strip()
 
     class PDF(FPDF):
         def header(self):
@@ -905,6 +918,60 @@ Price/Investor — Expect event-driven drawdowns around large unlocks; premiums 
         def footer(self):
             self.set_y(-15); self.set_font("Arial", "I", 8)
             self.cell(0, 10, "Report by TDeFi", 0, 0, "C")
+
+    def sanitize_text(text):
+        t = (text or "").strip()
+        # ensure latin-1 safe for FPDF
+        t = t.encode("latin-1", "ignore").decode("latin-1")
+        return t
+
+    def render_structured_summary(pdf: FPDF, summary_text: str, effective_page_width: float, base_font_size: int = 11):
+        """
+        Renders the AI summary preserving structure:
+        - Lines not starting with '-' are treated as section titles.
+        - Lines starting with '- ' are bullets. '**Label:** value' is parsed and rendered inline.
+        """
+        BULLET = "\xb7"  # middot, latin-1 safe
+        line_h = 7
+
+        pdf.set_font("Arial", "", base_font_size)
+
+        lines = (summary_text or "").splitlines()
+        for raw in lines:
+            line = raw.strip()
+            if not line:
+                continue
+
+            # Section title (no leading dash)
+            if not line.startswith("-"):
+                title = strip_md(line)
+                pdf.ln(2)
+                pdf.set_font("Arial", "B", base_font_size + 1)
+                pdf.multi_cell(effective_page_width, line_h + 1, sanitize_text(title))
+                pdf.set_font("Arial", "", base_font_size)
+                pdf.ln(1)
+                continue
+
+            # Bullet parsing: "- **Label:** rest" or generic "- text"
+            m = re.match(r"^\-\s*(\*\*(.+?)\*\*\s*:\s*)?(.*)$", line)
+            if m:
+                label = m.group(2)  # may be None
+                rest = strip_md(m.group(3) or "")
+                if label:
+                    bullet_text = f"{BULLET} {label}: {rest}"
+                else:
+                    bullet_text = f"{BULLET} {rest}"
+                # indent bullets slightly
+                left_margin = pdf.l_margin + 4
+                cur_x = pdf.get_x(); cur_y = pdf.get_y()
+                pdf.set_xy(left_margin, cur_y)
+                pdf.multi_cell(effective_page_width - 4, line_h, sanitize_text(bullet_text))
+                pdf.set_xy(pdf.l_margin, pdf.get_y())
+                continue
+
+            # Fallback paragraph
+            pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(line)))
+            pdf.ln(1)
 
     def save_fig_temp(fig, name):
         path = os.path.join(tempfile.gettempdir(), name)
@@ -919,38 +986,31 @@ Price/Investor — Expect event-driven drawdowns around large unlocks; premiums 
     pdf = PDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    pdf.set_font("Arial", size=12)
+    pdf.set_font("Arial", size=11)
 
     effective_page_width = pdf.w - 2 * pdf.l_margin
 
-    def sanitize_text(text):
-        t = (text or "").strip()
-        t = t.encode("latin-1", "ignore").decode("latin-1")
-        return t
+    # Render the AI summary with preserved structure (titles + bullets)
+    render_structured_summary(pdf, summary, effective_page_width, base_font_size=11)
 
-    def write_multiline(text, line_height=8):
-        t = sanitize_text(text)
-        if not t: return
-        max_token_len = 120
-        tokens = t.split(" ")
-        rebuilt = []
-        for token in tokens:
-            if len(token) > max_token_len:
-                chunks = [token[i:i+max_token_len] for i in range(0, len(token), max_token_len)]
-                rebuilt.extend(chunks)
-            else:
-                rebuilt.append(token)
-        safe_text = " ".join(rebuilt)
-        pdf.multi_cell(effective_page_width, line_height, safe_text)
-        pdf.ln(1)
+    # Start a fresh page for figures
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 12)
+    pdf.multi_cell(0, 8, "Figures")
+    pdf.ln(2)
 
-    for para in clean_gpt_text(summary):
-        write_multiline(para)
-
-    for fig_path in [img_infl, img_shock, img_sim]:
+    figs = [
+        ("Inflation Guard", img_infl),
+        ("Shock Stopper", img_shock),
+        ("Monte Carlo Survivability", img_sim),
+    ]
+    for title, fig_path in figs:
+        pdf.set_font("Arial", "B", 11)
+        pdf.multi_cell(0, 7, sanitize_text(title))
         pdf.image(fig_path, x=10, w=180)
         pdf.ln(5)
 
+    pdf.ln(4)
     pdf.set_font("Arial", "B", 12)
     pdf.multi_cell(0, 10, "Token Design by TDeFi")
     pdf.set_font("Arial", "", 11)
@@ -961,7 +1021,8 @@ Designing for Demand, Not Just Distribution
 A common pitfall is decoupling emissions from real demand. When supply outpaces utility, it triggers sell pressure and a negative flywheel. Our approach ties token releases to verifiable demand — active users, protocol revenue, and ecosystem participation — rewarding value creation, not just speculation.
 """.strip()
     for para in tdefi_note.split("\n\n"):
-        write_multiline(para)
+        pdf.multi_cell(effective_page_width, 8, sanitize_text(para))
+        pdf.ln(1)
 
     out = pdf.output(dest="S")
     if isinstance(out, (bytes, bytearray)):
