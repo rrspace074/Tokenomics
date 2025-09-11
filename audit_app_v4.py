@@ -928,6 +928,10 @@ When a lot of tokens unlock at once, more people can sell at the same time. That
             UNICODE_FONT = ttf
             break
 
+    def dash_safe(text: str) -> str:
+        """Replace Unicode dashes with ASCII hyphen-minus for core fonts."""
+        return (text or "").replace("—", "-").replace("–", "-")
+
     def title_with_emoji(title: str) -> str:
         """Attach an emoji to known metric headings (falls back to plain if unicode not available)."""
         base = title.strip()
@@ -965,8 +969,18 @@ When a lot of tokens unlock at once, more people can sell at the same time. That
                     pass
             else:
                 self.set_xy(10, 10)
-            self.set_font("Arial", "B", 14)
-            self.cell(0, 8, f"Tokenomics Audit Report — {project_name}", ln=True, align="L")
+            title_text = f"Tokenomics Audit Report — {project_name}"
+            if UNICODE_FONT:
+                try:
+                    self.add_font("DejaVu", "", UNICODE_FONT, uni=True)
+                    self.set_font("DejaVu", "", 14)  # regular unicode font (bold variant may not be present)
+                    self.cell(0, 8, title_text, ln=True, align="L")
+                except Exception:
+                    self.set_font("Arial", "B", 14)
+                    self.cell(0, 8, dash_safe(sanitize_text(title_text)), ln=True, align="L")
+            else:
+                self.set_font("Arial", "B", 14)
+                self.cell(0, 8, dash_safe(sanitize_text(title_text)), ln=True, align="L")
             self.set_font("Arial", "", 9)
             self.cell(0, 6, "Powered by TDeFi - TradeDog Token Growth Studio", ln=True, align="L")
             self.ln(2)
