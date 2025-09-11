@@ -55,20 +55,20 @@ st.markdown("""
         margin: 10px 0 0 0;
         display: block;
     }
-    .company-logo img { max-width: 100%; max-height: 60px; height: auto; object-fit: contain; display: block; }
+    .company-logo img { max-width: 100%; max-height: 36px; height: auto; object-fit: contain; display: block; }
 
     .main-header {
         background: linear-gradient(90deg, #ffc107 0%, #fd7e14 100%);
-        padding: 1rem 1.5rem;
+        padding: 0.6rem 1rem;
         border-radius: 10px;
-        margin-bottom: 2rem;
+        margin-bottom: 1.2rem;
         color: white;
         box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
         display: block;
     }
-    .main-header-inner { display: flex; align-items: center; justify-content: space-between; gap: 1.2rem; width: 100%; }
-    .main-title { font-weight: 800; font-size: 2.0rem; display: flex; align-items: center; gap: 0.6rem; }
-    .powered-wrap { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 1rem; opacity: 0.95; }
+    .main-header-inner { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; width: 100%; }
+    .main-title { display: none; }
+    .powered-wrap { display: none; }
 
     .tdefi-powered {
         text-align: center;
@@ -169,11 +169,7 @@ st.markdown(
     f"""
 <div class="main-header">
   <div class="main-header-inner">
-    <div class="main-title">🧠 <span>Tokenomics Audit AI Tool</span></div>
-    <div class="powered-wrap">
-        <span>powered by</span>
-        {f'<img src="{_logo_uri}" alt="Company Logo" style="height: 52px;" />' if _logo_uri else '<span class="tdefi-logo-text">TDeFi</span>'}
-    </div>
+    {f'<img src="{_logo_uri}" alt="Company Logo" style="height: 31px;" />' if _logo_uri else ''}
   </div>
 </div>
 """,
@@ -800,6 +796,7 @@ OUTPUT FORMAT (apply ONLY to metrics present in JSON)
 2) STAT — Impact — one line with the numbers and a plain interpretation (what high/low means).
 3) Price/Investor — 2–4 short sentences: what usually happens to price; how investors read the number; when the effect shows; what to watch.
 4) (No label) — 2–4 short sentences in simple language: what it measures, why high/low matters, and one concrete action.
+5) output should be structured with bullet points not in paragraphs. 
 
 METRICS (with simple impact cues)
 
@@ -871,16 +868,20 @@ UNLABELED EXPLAINER (required)
 MISSING DATA
 - If a metric or sub-value is absent in JSON, omit that metric or sub-line without comment.
 
-EXAMPLE PATTERN (form only; do NOT invent numbers)
+EXAMPLE PATTERN (formate only; do NOT invent numbers)
 YoY Inflation — Year-over-year growth in circulating supply across the first six years.
 Y1–Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — front-loaded.
+
 Price/Investor — More new tokens arrive early, so prices can swing or dip in the first years. As annual growth slows, price moves often calm down. Many investors wait for the slow-down before paying higher prices. Watch the Y1–Y2 values.
-More tokens come into the market in the beginning. If many holders sell, price can fall. Later, fewer new tokens arrive, which helps price hold steady. Plan communication and liquidity for the early years.
+
+- More tokens come into the market in the beginning. If many holders sell, price can fall. Later, fewer new tokens arrive, which helps price hold steady. Plan communication and liquidity for the early years.
 
 Supply Shock — Size and frequency of monthly unlocks.
 0–5%: <a> | 5–10%: <b> | 10–15%: <c> | 15%+: <d>; >10% months: <e>% — concentrated.
+
 Price/Investor — Large unlock months often pull price down near those dates. Many investors wait until after big unlocks to buy. Expect tighter pricing into unlock weeks. Watch the count of months above 10%.
-When a lot of tokens unlock at once, more people can sell at the same time. That can push price down for a while. Spreading unlocks or adding more liquidity can soften the drop.
+
+- When a lot of tokens unlock at once, more people can sell at the same time. That can push price down for a while. Spreading unlocks or adding more liquidity can soften the drop.
         """.strip()
 
         response = client.chat.completions.create(
@@ -913,9 +914,7 @@ When a lot of tokens unlock at once, more people can sell at the same time. That
     def _find_logo_path():
         """Try common filenames for a logo to place in the PDF header."""
         for fn in [
-            "tdefi.png", "tdefi.jpg", "tdefi.jpeg",
-            "logo.png", "logo.jpg", "logo.jpeg",
-            "your_logo.png", "your_logo.jpg", "your_logo.jpeg",
+            "your_logo.jpeg",
         ]:
             if os.path.exists(fn):
                 return fn
@@ -960,30 +959,16 @@ When a lot of tokens unlock at once, more people can sell at the same time. That
             self.logo_path = logo_path
 
         def header(self):
-            # Logo on the left if available
+            # Only show the logo at the top-right, scaled to 60%
             if self.logo_path and os.path.exists(self.logo_path):
                 try:
-                    self.image(self.logo_path, x=10, y=8, w=22)
-                    self.set_xy(35, 10)
+                    logo_w = 13  # ~60% of previous 22mm
+                    x_pos = self.w - self.r_margin - logo_w
+                    self.image(self.logo_path, x=x_pos, y=8, w=logo_w)
                 except Exception:
                     pass
-            else:
-                self.set_xy(10, 10)
-            title_text = f"Tokenomics Audit Report — {project_name}"
-            if UNICODE_FONT:
-                try:
-                    self.add_font("DejaVu", "", UNICODE_FONT, uni=True)
-                    self.set_font("DejaVu", "", 14)  # regular unicode font (bold variant may not be present)
-                    self.cell(0, 8, title_text, ln=True, align="L")
-                except Exception:
-                    self.set_font("Arial", "B", 14)
-                    self.cell(0, 8, dash_safe(sanitize_text(title_text)), ln=True, align="L")
-            else:
-                self.set_font("Arial", "B", 14)
-                self.cell(0, 8, dash_safe(sanitize_text(title_text)), ln=True, align="L")
-            self.set_font("Arial", "", 9)
-            self.cell(0, 6, "Powered by TDeFi - TradeDog Token Growth Studio", ln=True, align="L")
-            self.ln(2)
+            # Small spacer to separate header from body
+            self.ln(8)
 
         def footer(self):
             self.set_y(-15)
@@ -1111,6 +1096,8 @@ When a lot of tokens unlock at once, more people can sell at the same time. That
 
     logo_path = _find_logo_path()
     pdf = PDF(logo_path=logo_path)
+    # Slightly larger margins to avoid right-edge overflow
+    pdf.set_margins(15, 15, 15)
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     # If unicode font exists, switch default body font to it (title font is handled in renderer)
