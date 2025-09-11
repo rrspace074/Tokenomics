@@ -910,64 +910,176 @@ When a lot of tokens unlock at once, more people can sell at the same time. That
         t = re.sub(r"`([^`]*)`", r"\1", t)
         return t.strip()
 
+    def _find_logo_path():
+        """Try common filenames for a logo to place in the PDF header."""
+        for fn in [
+            "tdefi.png", "tdefi.jpg", "tdefi.jpeg",
+            "logo.png", "logo.jpg", "logo.jpeg",
+            "your_logo.png", "your_logo.jpg", "your_logo.jpeg",
+        ]:
+            if os.path.exists(fn):
+                return fn
+        return None
+
+    # Check if we can render unicode (emojis) by using a local TTF font if present.
+    UNICODE_FONT = None
+    for ttf in ["DejaVuSans.ttf", "NotoSans-Regular.ttf"]:
+        if os.path.exists(ttf):
+            UNICODE_FONT = ttf
+            break
+
+    def title_with_emoji(title: str) -> str:
+        """Attach an emoji to known metric headings (falls back to plain if unicode not available)."""
+        base = title.strip()
+        if UNICODE_FONT:
+            EMO = {
+                "YoY Inflation": "📈 ",
+                "Supply Shock": "⚠️ ",
+                "Governance HHI": "🏛️ ",
+                "Liquidity Shield": "🛡️ ",
+                "Lockup Ratio": "🔒 ",
+                "VC Dominance": "💼 ",
+                "Community Control": "👥 ",
+                "Emission Taper": "📉 ",
+                "Monte Carlo": "🎲 ",
+                "Game Theory Score": "🎯 ",
+            }
+            for k, v in EMO.items():
+                if k.lower() in base.lower():
+                    return f"{v}{base}"
+        # Fallback if no unicode font
+        return base
+
     class PDF(FPDF):
+        def __init__(self, logo_path=None):
+            super().__init__()
+            self.logo_path = logo_path
+
         def header(self):
+            # Logo on the left if available
+            if self.logo_path and os.path.exists(self.logo_path):
+                try:
+                    self.image(self.logo_path, x=10, y=8, w=22)
+                    self.set_xy(35, 10)
+                except Exception:
+                    pass
+            else:
+                self.set_xy(10, 10)
             self.set_font("Arial", "B", 14)
-            self.cell(0, 10, f"Tokenomics Audit Report - {project_name}", ln=True, align="C")
-            self.cell(0, 10, "Powered by TDeFi - TradeDog Token Growth Studio", ln=True, align="C")
+            self.cell(0, 8, f"Tokenomics Audit Report — {project_name}", ln=True, align="L")
+            self.set_font("Arial", "", 9)
+            self.cell(0, 6, "Powered by TDeFi - TradeDog Token Growth Studio", ln=True, align="L")
+            self.ln(2)
+
         def footer(self):
-            self.set_y(-15); self.set_font("Arial", "I", 8)
+            self.set_y(-15)
+            self.set_font("Arial", "I", 8)
             self.cell(0, 10, "Report by TDeFi", 0, 0, "C")
 
+    # Sanitize helper aware of unicode capability
     def sanitize_text(text):
         t = (text or "").strip()
-        # ensure latin-1 safe for FPDF
-        t = t.encode("latin-1", "ignore").decode("latin-1")
-        return t
+        if UNICODE_FONT:
+            return t  # keep unicode (emojis)
+        # ensure latin-1 safe for default Arial
+        return t.encode("latin-1", "ignore").decode("latin-1")
+
+    def normalize_ai_summary(text: str) -> str:
+        """
+        Insert smart breaks so 'Price/Investor —' starts on its own line,
+        and tidy excessive spaces.
+        """
+        if not text:
+            return ""
+        t = text.replace("\r\n", "\n").replace("\r", "\n")
+        # Break after STAT sentences when 'Price/Investor —' follows on the same line
+        t = re.sub(r"\.\s+Price/Investor\s+—\s+", ".\nPrice/Investor — ", t)
+        # Collapse long spaces
+        t = re.sub(r"[ \t]+", " ", t)
+        return t.strip()
 
     def render_structured_summary(pdf: FPDF, summary_text: str, effective_page_width: float, base_font_size: int = 11):
         """
         Renders the AI summary preserving structure:
-        - Lines not starting with '-' are treated as section titles.
-        - Lines starting with '- ' are bullets. '**Label:** value' is parsed and rendered inline.
+        - Headings like 'YoY Inflation — ...' become bold titles (with emojis if available) + italic subtitle.
+        - Lines beginning with 'Price/Investor —' are emphasized and placed on a new line.
+        - Lines starting with '- ' are bullets (kept).
+        - Remaining lines are paragraphs.
         """
-        BULLET = "\xb7"  # middot, latin-1 safe
+        BULLET = "\xb7"  # latin-1 safe bullet
         line_h = 7
 
-        pdf.set_font("Arial", "", base_font_size)
+        # Optionally switch to a Unicode font so emojis render
+        if UNICODE_FONT:
+            try:
+                pdf.add_font("DejaVu", "", UNICODE_FONT, uni=True)
+                pdf.set_font("DejaVu", "", base_font_size)
+            except Exception:
+                pdf.set_font("Arial", "", base_font_size)
+        else:
+            pdf.set_font("Arial", "", base_font_size)
 
-        lines = (summary_text or "").splitlines()
+        lines = normalize_ai_summary(summary_text).splitlines()
         for raw in lines:
             line = raw.strip()
             if not line:
                 continue
 
-            # Section title (no leading dash)
-            if not line.startswith("-"):
-                title = strip_md(line)
-                pdf.ln(2)
-                pdf.set_font("Arial", "B", base_font_size + 1)
-                pdf.multi_cell(effective_page_width, line_h + 1, sanitize_text(title))
-                pdf.set_font("Arial", "", base_font_size)
+            # Section heading pattern: "<Title> — <subtitle...>"
+            if "—" in line and not line.startswith(("-", "Price/Investor")):
+                parts = [p.strip() for p in line.split("—", 1)]
+                if len(parts) == 2 and parts[0] and parts[1]:
+                    title = title_with_emoji(strip_md(parts[0]))
+                    subtitle = strip_md(parts[1])
+
+                    pdf.ln(1)
+                    # Title
+                    if UNICODE_FONT:
+                        pdf.set_font("DejaVu", "", base_font_size + 2)
+                    else:
+                        pdf.set_font("Arial", "B", base_font_size + 1)
+                    pdf.multi_cell(effective_page_width, line_h + 1, sanitize_text(title))
+                    # Subtitle (italic feel)
+                    if UNICODE_FONT:
+                        pdf.set_font("DejaVu", "", base_font_size)
+                    else:
+                        pdf.set_font("Arial", "I", base_font_size)
+                    pdf.multi_cell(effective_page_width, line_h, sanitize_text(subtitle))
+                    # Reset for content
+                    if UNICODE_FONT:
+                        pdf.set_font("DejaVu", "", base_font_size)
+                    else:
+                        pdf.set_font("Arial", "", base_font_size)
+                    pdf.ln(1)
+                    continue
+
+            # Price/Investor emphasis
+            if line.lower().startswith("price/investor —"):
+                if UNICODE_FONT:
+                    pdf.set_font("DejaVu", "I", base_font_size)
+                else:
+                    pdf.set_font("Arial", "I", base_font_size)
+                pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(line)))
+                if UNICODE_FONT:
+                    pdf.set_font("DejaVu", "", base_font_size)
+                else:
+                    pdf.set_font("Arial", "", base_font_size)
                 pdf.ln(1)
                 continue
 
             # Bullet parsing: "- **Label:** rest" or generic "- text"
-            m = re.match(r"^\-\s*(\*\*(.+?)\*\*\s*:\s*)?(.*)$", line)
-            if m:
-                label = m.group(2)  # may be None
-                rest = strip_md(m.group(3) or "")
-                if label:
-                    bullet_text = f"{BULLET} {label}: {rest}"
-                else:
-                    bullet_text = f"{BULLET} {rest}"
-                # indent bullets slightly
-                left_margin = pdf.l_margin + 4
-                cur_x = pdf.get_x(); cur_y = pdf.get_y()
-                pdf.set_xy(left_margin, cur_y)
-                pdf.multi_cell(effective_page_width - 4, line_h, sanitize_text(bullet_text))
-                pdf.set_xy(pdf.l_margin, pdf.get_y())
-                continue
+            if line.startswith("-"):
+                m = re.match(r"^\-\s*(\*\*(.+?)\*\*\s*:\s*)?(.*)$", line)
+                if m:
+                    label = m.group(2)
+                    rest = strip_md(m.group(3) or "")
+                    bullet_text = f"{BULLET} {label}: {rest}" if label else f"{BULLET} {rest}"
+                    left_margin = pdf.l_margin + 4
+                    cur_y = pdf.get_y()
+                    pdf.set_xy(left_margin, cur_y)
+                    pdf.multi_cell(effective_page_width - 4, line_h, sanitize_text(bullet_text))
+                    pdf.set_xy(pdf.l_margin, pdf.get_y())
+                    continue
 
             # Fallback paragraph
             pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(line)))
@@ -983,14 +1095,23 @@ When a lot of tokens unlock at once, more people can sell at the same time. That
     img_shock = save_fig_temp(fig2, "shock.png")
     img_sim = save_fig_temp(fig3, "sim.png")
 
-    pdf = PDF()
+    logo_path = _find_logo_path()
+    pdf = PDF(logo_path=logo_path)
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    pdf.set_font("Arial", size=11)
+    # If unicode font exists, switch default body font to it (title font is handled in renderer)
+    if UNICODE_FONT:
+        try:
+            pdf.add_font("DejaVu", "", UNICODE_FONT, uni=True)
+            pdf.set_font("DejaVu", "", 11)
+        except Exception:
+            pdf.set_font("Arial", size=11)
+    else:
+        pdf.set_font("Arial", size=11)
 
     effective_page_width = pdf.w - 2 * pdf.l_margin
 
-    # Render the AI summary with preserved structure (titles + bullets)
+    # Render the AI summary with preserved structure (titles + bullets + Price/Investor line breaks)
     render_structured_summary(pdf, summary, effective_page_width, base_font_size=11)
 
     # Start a fresh page for figures
