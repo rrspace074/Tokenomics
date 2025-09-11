@@ -1059,10 +1059,12 @@ Price/Investor — Large unlock months often pull price down near those dates. M
             if not line:
                 continue
 
-            # Normalize optional leading dash bullets for detection
-            if line.startswith("- "):
-                content = line[2:].strip()
+            # Normalize leading bullet markers (-, *, •, ·) for detection
+            m_bullet = re.match(r"^([\-\*•·]+)\s+(.*)$", line)
+            if m_bullet:
+                content = m_bullet.group(2).strip()
                 # a) Section heading bullet: starts with known title
+                heading_printed = False
                 for name in SECTION_TITLES:
                     if content.lower().startswith(name.lower()):
                         rest = content[len(name):].strip()
@@ -1089,8 +1091,11 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                         else:
                             pdf.set_font("Arial", "", base_font_size)
                         pdf.ln(1)
-                        # Move to next line
+                        heading_printed = True
                         break
+                if heading_printed:
+                    # Move to next raw line
+                    continue
                 else:
                     # b) Special bullets: STAT and Price/Investor
                     if content.upper().startswith("STAT"):
