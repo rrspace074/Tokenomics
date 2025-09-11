@@ -1029,7 +1029,36 @@ Price/Investor — Large unlock months often pull price down near those dates. M
         - Remaining lines are paragraphs.
         """
         BULLET = "\xb7"  # latin-1 safe bullet
+        SECTION_SPACING = 2
         line_h = 7
+
+        def _strip_leading_bullets(s: str) -> str:
+            # Remove any leading bullet markers and surrounding spaces: -, *, •, ·
+            return re.sub(r'^[\s\-\*•·]+', '', s or '').strip()
+
+        def _split_title_subtitle(s: str, section_names: list[str]) -> tuple[str, str] | None:
+            """
+            Try to split a line into (title, subtitle) when it starts with a known section name.
+            Accept separators: em/en dash, hyphen, colon, or 2+ spaces.
+            Returns (title, subtitle) or None if not a section header.
+            """
+            raw = s.strip()
+            # If raw begins with a known title, try multiple separators
+            for name in section_names:
+                if raw.lower().startswith(name.lower()):
+                    rest = raw[len(name):].lstrip()
+                    if not rest:
+                        return (name, "")
+                    # Strip common separators
+                    rest = re.sub(r'^(—|–|-|:)\s*', '', rest)
+                    # If still begins with multiple spaces, treat as separator
+                    rest = re.sub(r'^\s{2,}', '', rest)
+                    return (name, rest)
+            # If it contains a dash separator like "Title — subtitle"
+            m = re.match(r'^(.+?)\s*[—–-]\s*(.+)$', raw)
+            if m and any(raw.lower().startswith(n.lower()) for n in section_names):
+                return (m.group(1).strip(), m.group(2).strip())
+            return None
 
         # Optionally switch to a Unicode font so emojis render
         if UNICODE_FONT:
@@ -1042,6 +1071,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
             pdf.set_font("Arial", "", base_font_size)
 
         lines = normalize_ai_summary(summary_text).splitlines()
+        lines = [ _strip_leading_bullets(x) for x in lines ]
         SECTION_TITLES = [
             "YoY Inflation",
             "Supply Shock bins",
@@ -1059,119 +1089,25 @@ Price/Investor — Large unlock months often pull price down near those dates. M
             if not line:
                 continue
 
-            # Normalize leading bullet markers (-, *, •, ·) for detection
-            m_bullet = re.match(r"^([\-\*•·]+)\s+(.*)$", line)
-            if m_bullet:
-                content = m_bullet.group(2).strip()
-                # a) Section heading bullet: starts with known title
-                heading_printed = False
-                for name in SECTION_TITLES:
-                    if content.lower().startswith(name.lower()):
-                        rest = content[len(name):].strip()
-                        # Allow separators like em-dash, hyphen, colon, or double-space
-                        rest = re.sub(r'^(—|–|-|:)?\s*', '', rest)
-                        title = title_with_emoji(strip_md(name))
-                        subtitle = strip_md(rest)
-
-                        pdf.ln(2)
-                        if UNICODE_FONT:
-                            pdf.set_font("DejaVu", "", base_font_size + 3)
-                        else:
-                            pdf.set_font("Arial", "B", base_font_size + 2)
-                        pdf.multi_cell(effective_page_width, line_h + 1, sanitize_text(title))
-                        if subtitle:
-                            if UNICODE_FONT:
-                                pdf.set_font("DejaVu", "", base_font_size + 0)
-                            else:
-                                pdf.set_font("Arial", "I", base_font_size)
-                            pdf.multi_cell(effective_page_width, line_h, sanitize_text(subtitle))
-                        # Reset font for body
-                        if UNICODE_FONT:
-                            pdf.set_font("DejaVu", "", base_font_size)
-                        else:
-                            pdf.set_font("Arial", "", base_font_size)
-                        pdf.ln(1)
-                        heading_printed = True
-                        break
-                if heading_printed:
-                    # Move to next raw line
-                    continue
+            # Try to parse known section headers first (works for both "· YoY Inflation  ..." and "YoY Inflation — ...")
+            split = _split_title_subtitle(line, SECTION_TITLES)
+            if split is not None:
+                title, subtitle = split
+                pdf.ln(2)
+                # Render section title larger & bold (acts as a subtitle header)
+                if UNICODE_FONT:
+                    pdf.set_font("DejaVu", "", base_font_size + 4)
                 else:
-                    # b) Special bullets: STAT and Price/Investor
-                    if content.upper().startswith("STAT"):
-                        if UNICODE_FONT:
-                            pdf.set_font("DejaVu", "", base_font_size)
-                        else:
-                            pdf.set_font("Arial", "B", base_font_size)
-                        left_margin = pdf.l_margin + 2
-                        cur_y = pdf.get_y()
-                        pdf.set_xy(left_margin, cur_y)
-                        pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(content)))
-                        pdf.set_xy(pdf.l_margin, pdf.get_y())
-                        pdf.ln(0.5)
-                        continue
-                    if content.lower().startswith("price/investor"):
-                        if UNICODE_FONT:
-                            pdf.set_font("DejaVu", "I", base_font_size)
-                        else:
-                            pdf.set_font("Arial", "I", base_font_size)
-                        left_margin = pdf.l_margin + 2
-                        cur_y = pdf.get_y()
-                        pdf.set_xy(left_margin, cur_y)
-                        pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(content)))
-                        pdf.set_xy(pdf.l_margin, pdf.get_y())
-                        pdf.ln(0.5)
-                        continue
-                    # c) Generic bullet
-                    m = re.match(r"^(\*\*(.+?)\*\*\s*:\s*)?(.*)$", content)
-                    if m:
-                        label = m.group(2)
-                        rest = strip_md(m.group(3) or "")
-                        bullet_text = f"{BULLET} {label}: {rest}" if label else f"{BULLET} {rest}"
-                        left_margin = pdf.l_margin + 4
-                        cur_y = pdf.get_y()
-                        pdf.set_xy(left_margin, cur_y)
-                        pdf.multi_cell(effective_page_width - 4, line_h, sanitize_text(bullet_text))
-                        pdf.set_xy(pdf.l_margin, pdf.get_y())
-                        pdf.ln(0.5)
-                        continue
-
-            # Section heading pattern: "<Title> — <subtitle...>"
-            if "—" in line and not line.startswith(("-", "Price/Investor")):
-                parts = [p.strip() for p in line.split("—", 1)]
-                if len(parts) == 2 and parts[0] and parts[1]:
-                    title = title_with_emoji(strip_md(parts[0]))
-                    subtitle = strip_md(parts[1])
-
-                    pdf.ln(1)
-                    # Title
+                    pdf.set_font("Arial", "B", base_font_size + 3)
+                pdf.multi_cell(effective_page_width, line_h + 2, sanitize_text(title_with_emoji(strip_md(title))))
+                # Subtitle (smaller / italic style)
+                if subtitle:
                     if UNICODE_FONT:
-                        pdf.set_font("DejaVu", "", base_font_size + 2)
-                    else:
-                        pdf.set_font("Arial", "B", base_font_size + 1)
-                    pdf.multi_cell(effective_page_width, line_h + 1, sanitize_text(title))
-                    # Subtitle (italic feel)
-                    if UNICODE_FONT:
-                        pdf.set_font("DejaVu", "", base_font_size)
+                        pdf.set_font("DejaVu", "", base_font_size + 0)
                     else:
                         pdf.set_font("Arial", "I", base_font_size)
-                    pdf.multi_cell(effective_page_width, line_h, sanitize_text(subtitle))
-                    # Reset for content
-                    if UNICODE_FONT:
-                        pdf.set_font("DejaVu", "", base_font_size)
-                    else:
-                        pdf.set_font("Arial", "", base_font_size)
-                    pdf.ln(1)
-                    continue
-
-            # Price/Investor emphasis
-            if line.lower().startswith("price/investor —"):
-                if UNICODE_FONT:
-                    pdf.set_font("DejaVu", "I", base_font_size)
-                else:
-                    pdf.set_font("Arial", "I", base_font_size)
-                pdf.set_x(pdf.l_margin)
-                pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(line)))
+                    pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(subtitle)))
+                # Reset body font
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "", base_font_size)
                 else:
@@ -1179,9 +1115,75 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                 pdf.ln(1)
                 continue
 
+            # If a line is a "STAT ..." or "Price/Investor ..." bullet, emphasize it without bullets
+            if line.upper().startswith("STAT"):
+                if UNICODE_FONT:
+                    pdf.set_font("DejaVu", "", base_font_size)
+                else:
+                    pdf.set_font("Arial", "B", base_font_size)
+                left_margin = pdf.l_margin + 2
+                cur_y = pdf.get_y()
+                pdf.set_xy(left_margin, cur_y)
+                pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(line)))
+                pdf.set_xy(pdf.l_margin, pdf.get_y())
+                pdf.ln(0.5)
+                continue
+
+            if line.lower().startswith("price/investor"):
+                if UNICODE_FONT:
+                    pdf.set_font("DejaVu", "I", base_font_size)
+                else:
+                    pdf.set_font("Arial", "I", base_font_size)
+                left_margin = pdf.l_margin + 2
+                cur_y = pdf.get_y()
+                pdf.set_xy(left_margin, cur_y)
+                pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(line)))
+                pdf.set_xy(pdf.l_margin, pdf.get_y())
+                pdf.ln(0.5)
+                continue
+
+            # Generic bullets (retain bullets for body, but never for section headers)
+            m_bullet = re.match(r'^([\-\*•·]+)\s+(.*)$', raw)
+            if m_bullet:
+                content = m_bullet.group(2).strip()
+                rest = strip_md(content)
+                bullet_text = f"{BULLET} {rest}"
+                left_margin = pdf.l_margin + 4
+                cur_y = pdf.get_y()
+                pdf.set_xy(left_margin, cur_y)
+                pdf.multi_cell(effective_page_width - 4, line_h, sanitize_text(bullet_text))
+                pdf.set_xy(pdf.l_margin, pdf.get_y())
+                pdf.ln(0.5)
+                continue
+
+            # Fallback: handle "Title — subtitle" if not caught earlier
+            if "—" in line and any(line.lower().startswith(n.lower()) for n in SECTION_TITLES):
+                parts = [p.strip() for p in line.split("—", 1)]
+                if len(parts) == 2:
+                    title = title_with_emoji(strip_md(parts[0]))
+                    subtitle = strip_md(parts[1])
+                    pdf.ln(2)
+                    if UNICODE_FONT:
+                        pdf.set_font("DejaVu", "", base_font_size + 4)
+                    else:
+                        pdf.set_font("Arial", "B", base_font_size + 3)
+                    pdf.multi_cell(effective_page_width, line_h + 2, sanitize_text(title))
+                    if subtitle:
+                        if UNICODE_FONT:
+                            pdf.set_font("DejaVu", "", base_font_size)
+                        else:
+                            pdf.set_font("Arial", "I", base_font_size)
+                        pdf.multi_cell(effective_page_width, line_h, sanitize_text(subtitle))
+                    if UNICODE_FONT:
+                        pdf.set_font("DejaVu", "", base_font_size)
+                    else:
+                        pdf.set_font("Arial", "", base_font_size)
+                    pdf.ln(1)
+                    continue
+
+            # Price/Investor emphasis (already handled above)
+
             # Generic non-bullet fallback paragraph
-            
-            # Fallback paragraph
             pdf.set_x(pdf.l_margin)
             pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(line)))
             pdf.ln(1)
