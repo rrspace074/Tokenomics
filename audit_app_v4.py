@@ -910,6 +910,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
         t = re.sub(r"\*\*(.+?)\*\*", r"\1", t)
         t = re.sub(r"`([^`]*)`", r"\1", t)
         t = t.replace("**", "").replace("*", "") 
+        t = re.sub(r'\n\s*\(([^\n]+)\)', r' (\1)', t)
         return t.strip()
 
     def _find_logo_path():
@@ -1100,14 +1101,14 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                     pdf.set_font("DejaVu", "", base_font_size + 4)
                 else:
                     pdf.set_font("Arial", "B", base_font_size + 3)
-                pdf.multi_cell(effective_page_width, line_h + 2, sanitize_text(title_with_emoji(strip_md(title))), align='L')
+                pdf.multi_cell(effective_page_width, line_h + 2, sanitize_text(title_with_emoji(strip_md(title))))
                 # Subtitle (smaller / italic style)
                 if subtitle:
                     if UNICODE_FONT:
                         pdf.set_font("DejaVu", "", base_font_size + 0)
                     else:
                         pdf.set_font("Arial", "I", base_font_size)
-                    pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(subtitle)), align='L')
+                    pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(subtitle)))
                 # Reset body font
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "", base_font_size)
@@ -1125,7 +1126,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                 left_margin = pdf.l_margin + 2
                 cur_y = pdf.get_y()
                 pdf.set_xy(left_margin, cur_y)
-                pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(line)), align='L')
+                pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(line)))
                 pdf.set_xy(pdf.l_margin, pdf.get_y())
                 pdf.ln(0.5)
                 continue
@@ -1138,7 +1139,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                 left_margin = pdf.l_margin + 2
                 cur_y = pdf.get_y()
                 pdf.set_xy(left_margin, cur_y)
-                pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(line)), align='L')
+                pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(line)))
                 pdf.set_xy(pdf.l_margin, pdf.get_y())
                 pdf.ln(0.5)
                 continue
@@ -1152,7 +1153,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                 left_margin = pdf.l_margin + 4
                 cur_y = pdf.get_y()
                 pdf.set_xy(left_margin, cur_y)
-                pdf.multi_cell(effective_page_width - 4, line_h, sanitize_text(bullet_text), align='L')
+                pdf.multi_cell(effective_page_width - 4, line_h, sanitize_text(bullet_text))
                 pdf.set_xy(pdf.l_margin, pdf.get_y())
                 pdf.ln(0.5)
                 continue
@@ -1168,13 +1169,13 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                         pdf.set_font("DejaVu", "", base_font_size + 4)
                     else:
                         pdf.set_font("Arial", "B", base_font_size + 3)
-                    pdf.multi_cell(effective_page_width, line_h + 2, sanitize_text(title), align='L')
+                    pdf.multi_cell(effective_page_width, line_h + 2, sanitize_text(title))
                     if subtitle:
                         if UNICODE_FONT:
                             pdf.set_font("DejaVu", "", base_font_size)
                         else:
                             pdf.set_font("Arial", "I", base_font_size)
-                        pdf.multi_cell(effective_page_width, line_h, sanitize_text(subtitle), align='L')
+                        pdf.multi_cell(effective_page_width, line_h, sanitize_text(subtitle))
                     if UNICODE_FONT:
                         pdf.set_font("DejaVu", "", base_font_size)
                     else:
@@ -1186,7 +1187,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
 
             # Generic non-bullet fallback paragraph
             pdf.set_x(pdf.l_margin)
-            pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(line)), align='L')
+            pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(line)))
             pdf.ln(1)
 
     def save_fig_temp(fig, name):
@@ -1223,7 +1224,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
     # Start a fresh page for figures
     pdf.add_page()
     pdf.set_font("Arial", "B", 12)
-    pdf.multi_cell(0, 8, "Figures", align='L')
+    pdf.multi_cell(0, 8, "Figures")
     pdf.ln(2)
 
     figs = [
@@ -1233,7 +1234,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
     ]
     for title, fig_path in figs:
         pdf.set_font("Arial", "B", 11)
-        pdf.multi_cell(0, 7, sanitize_text(title), align='L')
+        pdf.multi_cell(0, 7, sanitize_text(title))
         # Fit figure to content width inside margins
         fig_width = pdf.w - pdf.l_margin - pdf.r_margin
         pdf.image(fig_path, x=pdf.l_margin, w=fig_width)
@@ -1241,7 +1242,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
 
     pdf.ln(4)
     pdf.set_font("Arial", "B", 12)
-    pdf.multi_cell(0, 10, "Token Design by TDeFi", align='L')
+    pdf.multi_cell(0, 10, "Token Design by TDeFi")
     pdf.set_font("Arial", "", 11)
     tdefi_note = """
 Token engineering is not about distribution schedules or supply caps alone — it aligns incentives, behavior, and long-term value creation. A well-engineered token system creates harmony between product usage, network growth, and token demand. Poor token design often leads to value leakage and unsustainable emissions. At TDeFi, we build token models as economic engines — driven by utility, governed by logic, and sustained by real adoption.
@@ -1251,7 +1252,7 @@ A common pitfall is decoupling emissions from real demand. When supply outpaces 
 """.strip()
     for para in tdefi_note.split("\n\n"):
         pdf.set_x(pdf.l_margin)
-        pdf.multi_cell(effective_page_width, 8, sanitize_text(para), align='L')
+        pdf.multi_cell(effective_page_width, 8, sanitize_text(para))
         pdf.ln(1)
 
     out = pdf.output(dest="S")
