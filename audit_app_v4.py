@@ -1095,20 +1095,21 @@ Price/Investor — Large unlock months often pull price down near those dates. M
             split = _split_title_subtitle(line, SECTION_TITLES)
             if split is not None:
                 title, subtitle = split
-                pdf.ln(2)
-                # Render section title larger & bold (acts as a subtitle header)
+                pdf.ln(3)  # slightly more breathing room before each section
+                # Render section title centered, larger & bold
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "", base_font_size + 4)
                 else:
                     pdf.set_font("Arial", "B", base_font_size + 3)
-                pdf.multi_cell(effective_page_width, line_h + 2, sanitize_text(title_with_emoji(strip_md(title))))
-                # Subtitle (smaller / italic style)
+                # Use a single-line centered cell for stable alignment
+                pdf.cell(0, line_h + 2, sanitize_text(title_with_emoji(strip_md(title)).strip()), ln=True, align="C")
+                # Subtitle (smaller / italic style), left aligned
                 if subtitle:
                     if UNICODE_FONT:
-                        pdf.set_font("DejaVu", "", base_font_size + 0)
+                        pdf.set_font("DejaVu", "", base_font_size)
                     else:
                         pdf.set_font("Arial", "I", base_font_size)
-                    pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(subtitle)))
+                    pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(subtitle).strip()), align='L')
                 # Reset body font
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "", base_font_size)
@@ -1169,13 +1170,14 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                         pdf.set_font("DejaVu", "", base_font_size + 4)
                     else:
                         pdf.set_font("Arial", "B", base_font_size + 3)
-                    pdf.multi_cell(effective_page_width, line_h + 2, sanitize_text(title))
+                    # Center the title using single-line cell
+                    pdf.cell(0, line_h + 2, sanitize_text(title).strip(), ln=True, align="C")
                     if subtitle:
                         if UNICODE_FONT:
                             pdf.set_font("DejaVu", "", base_font_size)
                         else:
                             pdf.set_font("Arial", "I", base_font_size)
-                        pdf.multi_cell(effective_page_width, line_h, sanitize_text(subtitle))
+                        pdf.multi_cell(effective_page_width, line_h, sanitize_text(subtitle).strip(), align='L')
                     if UNICODE_FONT:
                         pdf.set_font("DejaVu", "", base_font_size)
                     else:
