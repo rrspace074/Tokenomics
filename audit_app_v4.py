@@ -783,111 +783,154 @@ INPUT
 </metrics>
 
 STYLE RULES
-- For each metric: one-line Purpose, then “STAT — Impact”, then “Price/Investor —”, then an unlabeled 2–4 sentence explainer.
+- For each metric: one-line Purpose, then “STAT — Impact”, then “Price Impact —”, then “Suggestions —”.
+- Output ONLY bullets (each line starts with "- "). No paragraphs.
 - Use short, clear sentences. Explain cause → effect. No buzzwords.
   * Use: “more/fewer tokens released”, “more/less selling pressure”, “price may fall/rise”, “few holders/many holders”.
   * Avoid: overhang, rerating, premium/discount, legitimacy, runway, cliffs (say “large unlock months”).
-- If any value is missing in JSON, omit that line. Do not mention missing data.
+- If any value is missing in JSON, omit that bullet. Do not mention missing data.
 - Rounding: % to 0 decimals (use 1 decimal if <1% or when a ratio needs it). Show ratios as % when natural (e.g., Liquidity Shield).
 - Tone: direct, neutral, no emojis.
 
-OUTPUT FORMAT (apply ONLY to metrics present in JSON). 
-1) Purpose — Describing what the metric captures properly in detail. Bold this pointer.
-2) STAT — Impact — one line with the numbers and a plain interpretation (what high/low means).Bold this pointer.
-3) Price/Investor — 2–4 short sentences: what usually happens to price; how investors read the number; when the effect shows; what to watch.Bold this pointer.
-4) (No label) — 2–4 short sentences in simple language: what it measures, why high/low matters, and one concrete action.
-5) output should be structured with bullet points not in paragraphs. 
+OUTPUT FORMAT (apply ONLY to metrics present in JSON)
+- **Purpose —** one line describing what the metric captures.
+- **STAT — Impact —** one line with the numbers and a plain interpretation (what high/low means).
+- **Price Impact —** 4–6 short sentences: what the current number(s) are likely to cause; how investors read it; when the effect shows (now/near unlock months/later years); one watch item tied to these values.
+- **Suggestions —** 4–6 short sentences: metric-specific actions to change outcomes for THESE numbers (e.g., stagger unlocks, add liquidity, extend locks, alter rewards). Be concrete and time-bound.
 
 METRICS (with simple impact cues)
 
 1) YoY Inflation (Y1–Y6)
    Purpose: Year-over-year growth in circulating supply across the first six years.
-   STAT: “Y1–Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — <front-loaded/moderate/back-loaded> inflation profile.”
+   Here front-loaded / moderate / back-loaded means -
+    • Front-loaded: early years are ≥20% higher than late years on average.
+    • Back-loaded: late years are ≥20% higher than early years.
+    • Moderate: neither is ≥20% higher.
+   STAT: “Y1, Y2, Y3, Y4, Y5, Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — <front-loaded/moderate/back-loaded> inflation profile.”
    Impact cues: High in early years → more new tokens arrive early; later years lower → selling pressure usually eases over time.
 
 2) Supply Shock bins (0–5%, 5–10%, 10–15%, 15%+) and % months >10%
    Purpose: Size and frequency of monthly unlocks.
-   STAT: “0–5%: <m0-5> | 5–10%: <m5-10> | 10–15%: <m10-15> | 15%+: <m15p>; >10% months: <share>% — <diffuse/concentrated> release profile.”
+   Here diffuse / mixed / concentrated means - how bunched the big months are.
+    • Concentrated: ≥30% of months are >10% or there are ≥2 months at 15%+.
+    • Diffuse: ≤20% of months are >10% and none at 15%+.
+    • Mixed: everything in between.
+   STAT: “0–5%: <m0-5> | 5–10%: <m5-10> | 10–15%: <m10-15> | 15%+: <m15p>; >10% months: <share>% — <diffuse/mixed/concentrated> release profile.”
    Impact cues: More months above 10% → price often weak near those months; more 10–15%/15%+ months → unlocks bunch up and can move price.
 
 3) Governance HHI
    Purpose: How concentrated token ownership is.
+   Here low / moderate / high means -
+    • Low: <0.15 (many holders).
+    • Moderate: 0.15–0.25.
+    • High: >0.25 (few holders can decide).
    STAT: “HHI: <hhi> — <low/moderate/high> concentration.”
-   Categorize: <0.15 = many holders; 0.15–0.25 = mixed; >0.25 = few holders can decide.
    Impact cues: Higher HHI → a small group can steer votes; lower HHI → decisions are spread out.
 
 4) Liquidity Shield Ratio
    Purpose: Liquidity funds vs. sellable token value at launch.
+   Here below / at / above 100% coverage means -
+    • Below: depth is smaller than sellable value.
+    • At: roughly equal.
+    • Above: depth exceeds sellable value.
    STAT: “Shield: <ratio>% — <below/at/above> 100% coverage.”
    Impact cues: Below 100% → not enough buy support if many sell at launch; at/above 100% → selling is easier to absorb.
 
 5) Lockup Ratio (Supply share ≥12m and Pool share ≥12m)
    Purpose: Share of tokens and pools locked for at least 12 months.
+   Here tight / loose free-float path means -
+    • Tight: Supply ≥12m ≥50% or Pool ≥12m ≥50% (fewer tokens can trade early).
+    • Loose: both below 50% (more tokens can trade early).
    STAT: “Supply ≥12m: <slock>% | Pool ≥12m: <plock>% — <tight/loose> free-float path.”
    Impact cues: Higher lockups → fewer tokens can trade early → steadier price; lower lockups → more tokens can hit the market → choppier price.
 
 6) VC Dominance (%)
    Purpose: Share held by venture/sponsor pools.
+   Here elevated / modest means -
+    • Elevated: ≥25% (few funds control a large share).
+    • Modest: <25% (lower chance of large, coordinated sells).
    STAT: “VC: <vc>% — <elevated/modest> sponsor control.”
    Impact cues: Higher share → a few funds can influence votes and selling; lower share → less chance of large, coordinated sells.
 
 7) Community Control Index (%)
    Purpose: Share held or earned by users/community pools.
+   Here strong / weak user alignment means -
+    • Strong: ≥40% user/community share.
+    • Weak: <40% user/community share.
    STAT: “Community: <comm>% — <strong/weak> user alignment.”
    Impact cues: Higher share → users have more say and tend to stay engaged; lower share → weaker community voice.
 
 8) Emission Taper (first 12m / last 12m)
    Purpose: Compare tokens released early vs. late.
+   Here front-loaded / balanced / back-loaded means -
+    • Front-loaded: >1 (more tokens come early).
+    • Balanced: 0.9–1.1 (similar early and late).
+    • Back-loaded: <1 (more tokens come later).
    STAT: “Taper: <taper>x — <front-loaded/balanced/back-loaded> schedule.”
    Impact cues: >1 → more tokens released early → near-term pressure; <1 → more released later → early period calmer.
 
 9) Monte Carlo Survivability (min, p25, median, p75, p90, max)
-   Purpose: Stress test: can typical buying absorb scheduled releases?
+   Purpose: Stress test: translates many “what-if” scenarios into how often monthly supply was absorbed by typical buying.
+   Here min / p25 / med / p75 / p90 / max means -
+    • min: worst case across all paths (the lowest survivability %).
+    • p25: 25% of paths were at or below this; 75% did better.
+    • med: median (50th percentile). A typical outcome.
+    • p75: 75th percentile. 25% of paths did better; most did worse.
+    • p90: 90th percentile. Near best-case territory.
+    • max: best case across all paths.
    STAT: “Survivability (min/p25/med/p75/p90/max): <min>/<p25>/<med>/<p75>/<p90>/<max> — <fragile/middle-of-pack/resilient> median.”
    Impact cues: Higher median/upper values → more scenarios where price holds; lower values → more cases where releases are hard to absorb.
 
 10) Game Theory Score (0–5)
     Purpose: How hard it is to game the incentive design.
+    Here robust / average / fragile means -
+     • Robust: 3.5–5.0 (rewards push users to help the network).
+     • Average: 2.0–3.4 (some safeguards; loopholes may remain).
+     • Fragile: 0–1.9 (easy to farm and dump without helping).
     STAT: “GT Score: <gt>/5 — <robust/average/fragile> incentive design.”
     Impact cues: Low score → people can game rewards or take value without helping; high score → rewards push people to help the network.
 
-PRICE/INVESTOR LINE (simple, required)
-- Start with “Price/Investor —”.
-- Write 2–4 short sentences:
-  * Price effect (up/down/more swings/steadier) tied to the STAT.
-  * Investor read (more risk vs. less risk; faster to sell vs. likely to hold).
-  * Timing (now, near unlock months, later years).
-  * One watch item (e.g., “watch months above 10%”, “watch HHI near 0.25”).
+PRICE IMPACT LINE (required)
+- Start with “Price Impact —”.
+- Write 4–6  sentences tied to the CURRENT STAT values:
+  * What the current number(s) usually cause in price (up/down/more swings/steadier).
+  * How investors read THIS number (more risk vs less risk; faster to sell vs likely to hold).
+  * Timing: now, near large unlock months, or in later years (based on the metric).
+  * One watch item tied directly to these values (e.g., “watch months above 10%”, “watch HHI near 0.25”).
 
-UNLABELED EXPLAINER (required)
-- Do NOT add any label. Write 2–4 short sentences:
-  * What the number measures in everyday terms.
-  * Why higher or lower matters.
-  * One simple action to consider (e.g., spread unlocks, add liquidity, communicate unlock calendar).
+SUGGESTIONS LINE (required)
+- Start with “Suggestions —”.
+- Write 4–6 sentences with metric-specific actions or suggestions that modify outcomes for THESE numbers & make the tokenomics more optimised:
+  * Examples: stagger or split large unlock months; add buy-side liquidity near big months; extend locks; add vesting; widen community programs; adjust reward rules; coordinate market makers; time catalysts to heavy emission windows; publish calendars and dashboards.
+  * Keep actions concrete yet detailed and time-bound (e.g., “add depth two weeks before and after 15%+ months”).
 
 MISSING DATA
-- If a metric or sub-value is absent in JSON, omit that metric or sub-line without comment.
+- If a metric or sub-value is absent in JSON, omit that metric or that bullet without comment.
 
-EXAMPLE PATTERN (formate only; do NOT invent numbers)
-YoY Inflation — Year-over-year growth in circulating supply across the first six years.
-Y1–Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — front-loaded.
+EXAMPLE PATTERN (format only; do NOT invent numbers )
 
-Price/Investor — More new tokens arrive early, so prices can swing or dip in the first years. As annual growth slows, price moves often calm down. Many investors wait for the slow-down before paying higher prices. Watch the Y1–Y2 values.
+- YoY Inflation — Year-over-year growth in circulating supply across the first six years.
+Here front-loaded / moderate / back-loaded means -
+    • Front-loaded: early years are ≥20% higher than late years on average.
+    • Back-loaded: late years are ≥20% higher than early years.
+    • Moderate: neither is ≥20% higher.
+- STAT — Impact — Y1–Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — front-loaded.
+- Price Impact — More new tokens arrive early, so price may dip or swing in the first years. As annual growth slows, price moves often calm. Many investors wait for later years before paying higher prices. Watch the Y1–Y2 values.
+- Suggestions — Add buy-side depth and clear comms in Y1–Y2. Time listings/partners after growth slows. Publish and socialize an unlock calendar.
 
-- More tokens come into the market in the beginning. If many holders sell, price can fall. Later, fewer new tokens arrive, which helps price hold steady. Plan communication and liquidity for the early years.
-
-Supply Shock — Size and frequency of monthly unlocks.
-0–5%: <a> | 5–10%: <b> | 10–15%: <c> | 15%+: <d>; >10% months: <e>% — concentrated.
-
-Price/Investor — Large unlock months often pull price down near those dates. Many investors wait until after big unlocks to buy. Expect tighter pricing into unlock weeks. Watch the count of months above 10%.
-
-- When a lot of tokens unlock at once, more people can sell at the same time. That can push price down for a while. Spreading unlocks or adding more liquidity can soften the drop.
-        """.strip()
+- Supply Shock — Size and frequency of monthly unlocks.
+ Here diffuse / mixed / concentrated means - how bunched the big months are.
+    • Concentrated: ≥30% of months are >10% or there are ≥2 months at 15%+.
+    • Diffuse: ≤20% of months are >10% and none at 15%+.
+    • Mixed: everything in between.
+- STAT — Impact — 0–5%: <a> | 5–10%: <b> | 10–15%: <c> | 15%+: <d>; >10% months: <e>% — concentrated.
+- Price Impact — Large unlock months often pull price down near those dates. Many investors wait until after big unlocks to re-enter. Expect tighter pricing into unlock weeks. Watch the count of months above 10%.
+- Suggestions — Split or stagger 10–15% and 15%+ months. Add liquidity two weeks before and after big months. Coordinate market-makers and publish reminders 30 days ahead.  """.strip()
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5",
             messages=[
-                {"role": "system", "content": "You are a tokenomics audit analyst."},
+                {"role": "system", "content": "You are a Graet Tokenomics audit analyst.With years of expierence in auditinf tokenomics for projects"},
                 {"role": "user", "content": analysis_prompt}
             ],
             temperature=0.2
@@ -910,8 +953,6 @@ Price/Investor — Large unlock months often pull price down near those dates. M
         t = re.sub(r"\*\*(.+?)\*\*", r"\1", t)
         t = re.sub(r"`([^`]*)`", r"\1", t)
         t = t.replace("**", "").replace("*", "") 
-        t = re.sub(r'\n\s*\(([^\n]+)\)', r' (\1)', t)
-        t = t.replace("—", "-").replace("–", "-")
         return t.strip()
 
     def _find_logo_path():
@@ -1031,7 +1072,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
         - Lines starting with '- ' are bullets (kept).
         - Remaining lines are paragraphs.
         """
-        BULLET = "\xb7"  # latin-1 safe bullet
+        BULLET = "•" if UNICODE_FONT else "\xb7"  # prefer solid bullet when unicode font available
         SECTION_SPACING = 2
         line_h = 7
 
@@ -1074,9 +1115,9 @@ Price/Investor — Large unlock months often pull price down near those dates. M
             pdf.set_font("Arial", "", base_font_size)
 
         lines = normalize_ai_summary(summary_text).splitlines()
-        lines = [ _strip_leading_bullets(x) for x in lines ]
         SECTION_TITLES = [
             "YoY Inflation",
+            "Supply Shock",
             "Supply Shock bins",
             "Governance HHI",
             "Liquidity Shield Ratio",
@@ -1093,25 +1134,27 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                 continue
 
             # Try to parse known section headers first (works for both "· YoY Inflation  ..." and "YoY Inflation — ...")
-            split = _split_title_subtitle(line, SECTION_TITLES)
+            line_nobullet = _strip_leading_bullets(line)
+            split = _split_title_subtitle(line_nobullet, SECTION_TITLES)
             if split is not None:
                 title, subtitle = split
-                pdf.ln(3)  # slightly more breathing room before each section
-                # Render section title centered, larger & bold
+                pdf.ln(2)
+                # Render section title larger & bold (acts as a subtitle header)
+                pdf.set_text_color(80, 80, 80)
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "", base_font_size + 4)
                 else:
                     pdf.set_font("Arial", "B", base_font_size + 3)
-                # Use a single-line centered cell for stable alignment
-                pdf.cell(0, line_h + 2, sanitize_text(title_with_emoji(strip_md(title)).strip()), ln=True, align="C")
-                # Subtitle (smaller / italic style), left aligned
+                pdf.multi_cell(effective_page_width, line_h + 2, sanitize_text(title_with_emoji(strip_md(title))))
+                # Subtitle (smaller / italic style)
                 if subtitle:
                     if UNICODE_FONT:
-                        pdf.set_font("DejaVu", "", base_font_size)
+                        pdf.set_font("DejaVu", "", base_font_size + 0)
                     else:
                         pdf.set_font("Arial", "I", base_font_size)
-                    pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(subtitle).strip()), align='L')
+                    pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(subtitle)))
                 # Reset body font
+                pdf.set_text_color(0, 0, 0)
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "", base_font_size)
                 else:
@@ -1119,7 +1162,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                 pdf.ln(1)
                 continue
 
-            # If a line is a "STAT ..." or "Price/Investor ..." bullet, emphasize it without bullets
+            # If a line is a "STAT ..." bullet/line, render bold and drop the word 'STAT'
             if line.upper().startswith("STAT"):
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "", base_font_size)
@@ -1128,28 +1171,85 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                 left_margin = pdf.l_margin + 2
                 cur_y = pdf.get_y()
                 pdf.set_xy(left_margin, cur_y)
-                pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(line)))
+                # Cleanup: remove 'STAT:' prefix and expand 'Y1–Y6:' pattern
+                clean = re.sub(r"^STAT\s*[:\-—]\s*", "", line, flags=re.I)
+                clean = re.sub(r"Y1\s*[–-]?\s*Y6\s*:\s*", "Y1, Y2, Y3, Y4, Y5, Y6: ", clean)
+                clean = re.sub(r"Y1Y6\s*:\s*", "Y1, Y2, Y3, Y4, Y5, Y6: ", clean)
+                pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(clean)))
                 pdf.set_xy(pdf.l_margin, pdf.get_y())
                 pdf.ln(0.5)
                 continue
 
             if line.lower().startswith("price/investor"):
-                if UNICODE_FONT:
-                    pdf.set_font("DejaVu", "I", base_font_size)
-                else:
-                    pdf.set_font("Arial", "I", base_font_size)
+                # Render as a bullet item with a bold 'Price/Investor:' label
                 left_margin = pdf.l_margin + 2
                 cur_y = pdf.get_y()
                 pdf.set_xy(left_margin, cur_y)
-                pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(line)))
+                pdf.cell(3, line_h, BULLET, ln=0)
+                label = "Price/Investor: "
+                if UNICODE_FONT:
+                    # DejaVu regular only; simulate emphasis by regular
+                    pdf.set_font("DejaVu", "", base_font_size)
+                else:
+                    pdf.set_font("Arial", "B", base_font_size)
+                pdf.cell(pdf.get_string_width(label) + 1, line_h, sanitize_text(label), ln=0)
+                body = re.sub(r"^price/investor\s*[—:-]\s*", "", line, flags=re.I)
+                if UNICODE_FONT:
+                    pdf.set_font("DejaVu", "", base_font_size)
+                else:
+                    pdf.set_font("Arial", "", base_font_size)
+                start_x = pdf.get_x()
+                used_width = start_x - (pdf.l_margin + 2)
+                pdf.multi_cell(effective_page_width - used_width, line_h, sanitize_text(strip_md(body)))
                 pdf.set_xy(pdf.l_margin, pdf.get_y())
                 pdf.ln(0.5)
                 continue
 
-            # Generic bullets (retain bullets for body, but never for section headers)
+            # Bulleted lines
             m_bullet = re.match(r'^([\-\*•·]+)\s+(.*)$', raw)
             if m_bullet:
                 content = m_bullet.group(2).strip()
+                # Bullet line containing STAT → render as bold non-bullet line
+                if content.upper().startswith("STAT"):
+                    if UNICODE_FONT:
+                        pdf.set_font("DejaVu", "", base_font_size)
+                    else:
+                        pdf.set_font("Arial", "B", base_font_size)
+                    left_margin = pdf.l_margin + 2
+                    cur_y = pdf.get_y()
+                    pdf.set_xy(left_margin, cur_y)
+                    clean = re.sub(r"^STAT\s*[:\-—]\s*", "", content, flags=re.I)
+                    clean = re.sub(r"Y1\s*[–-]?\s*Y6\s*:\s*", "Y1, Y2, Y3, Y4, Y5, Y6: ", clean)
+                    clean = re.sub(r"Y1Y6\s*:\s*", "Y1, Y2, Y3, Y4, Y5, Y6: ", clean)
+                    pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(clean)))
+                    pdf.set_xy(pdf.l_margin, pdf.get_y())
+                    pdf.ln(0.5)
+                    continue
+                # Bullet line with Price/Investor → bullet + bold label
+                if content.lower().startswith("price/investor"):
+                    left_margin = pdf.l_margin + 2
+                    cur_y = pdf.get_y()
+                    pdf.set_xy(left_margin, cur_y)
+                    pdf.cell(3, line_h, BULLET, ln=0)
+                    label = "Price/Investor: "
+                    if UNICODE_FONT:
+                        pdf.set_font("DejaVu", "", base_font_size)
+                    else:
+                        pdf.set_font("Arial", "B", base_font_size)
+                    pdf.cell(pdf.get_string_width(label) + 1, line_h, sanitize_text(label), ln=0)
+                    body = re.sub(r"^price/investor\s*[—:-]\s*", "", content, flags=re.I)
+                    if UNICODE_FONT:
+                        pdf.set_font("DejaVu", "", base_font_size)
+                    else:
+                        pdf.set_font("Arial", "", base_font_size)
+                    start_x = pdf.get_x()
+                    used_width = start_x - (pdf.l_margin + 2)
+                    pdf.multi_cell(effective_page_width - used_width, line_h, sanitize_text(strip_md(body)))
+                    pdf.set_xy(pdf.l_margin, pdf.get_y())
+                    pdf.ln(0.5)
+                    continue
+
+                # Generic bullets (retain for normal body items)
                 rest = strip_md(content)
                 bullet_text = f"{BULLET} {rest}"
                 left_margin = pdf.l_margin + 4
@@ -1167,18 +1267,19 @@ Price/Investor — Large unlock months often pull price down near those dates. M
                     title = title_with_emoji(strip_md(parts[0]))
                     subtitle = strip_md(parts[1])
                     pdf.ln(2)
+                    pdf.set_text_color(80, 80, 80)
                     if UNICODE_FONT:
                         pdf.set_font("DejaVu", "", base_font_size + 4)
                     else:
                         pdf.set_font("Arial", "B", base_font_size + 3)
-                    # Center the title using single-line cell
-                    pdf.cell(0, line_h + 2, sanitize_text(title).strip(), ln=True, align="C")
+                    pdf.multi_cell(effective_page_width, line_h + 2, sanitize_text(title))
                     if subtitle:
                         if UNICODE_FONT:
                             pdf.set_font("DejaVu", "", base_font_size)
                         else:
                             pdf.set_font("Arial", "I", base_font_size)
-                        pdf.multi_cell(effective_page_width, line_h, sanitize_text(subtitle).strip(), align='L')
+                        pdf.multi_cell(effective_page_width, line_h, sanitize_text(subtitle))
+                    pdf.set_text_color(0, 0, 0)
                     if UNICODE_FONT:
                         pdf.set_font("DejaVu", "", base_font_size)
                     else:
