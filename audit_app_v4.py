@@ -786,17 +786,21 @@ STYLE RULES
 - For each metric: one-line Purpose, then “STAT — Impact”, then “Price Impact —”, then “Suggestions —”.
 - Output ONLY bullets (each line starts with "- "). No paragraphs.
 - Use short, clear sentences. Explain cause → effect. No buzzwords.
-  * Use: “more/fewer tokens released”, “more/less selling pressure”, “price may fall/rise”, “few holders/many holders”.
-  * Avoid: overhang, rerating, premium/discount, legitimacy, runway, cliffs (say “large unlock months”).
+  Use: “more/fewer tokens released”, “more/less selling pressure”, “price may fall/rise”, “few holders/many holders”.
+  Avoid: overhang, rerating, premium/discount, legitimacy, runway, cliffs (say “large unlock months”).
 - If any value is missing in JSON, omit that bullet. Do not mention missing data.
 - Rounding: % to 0 decimals (use 1 decimal if <1% or when a ratio needs it). Show ratios as % when natural (e.g., Liquidity Shield).
 - Tone: direct, neutral, no emojis.
 
-OUTPUT FORMAT (apply ONLY to metrics present in JSON)
-- **Purpose —** one line describing what the metric captures.
-- **STAT — Impact —** one line with the numbers and a plain interpretation (what high/low means).
-- **Price Impact —** 4–6 short sentences: what the current number(s) are likely to cause; how investors read it; when the effect shows (now/near unlock months/later years); one watch item tied to these values.
-- **Suggestions —** 4–6 short sentences: metric-specific actions to change outcomes for THESE numbers (e.g., stagger unlocks, add liquidity, extend locks, alter rewards). Be concrete and time-bound.
+OUTPUT FORMAT 
+- Purpose — one line describing what the metric captures.
+Here (the description present for each metrices below should be here, like for YOY Inflation -    Here front-loaded / moderate / back-loaded means -
+    • Front-loaded: early years are ≥20% higher than late years on average.
+    • Back-loaded: late years are ≥20% higher than early years.
+    • Moderate: neither is ≥20% higher. simmilarly for others)
+- STAT — Impact — one line with the numbers and a plain interpretation (what high/low means).
+- Price Impact — 4–6 short sentences: what the current number(s) are likely to cause; how investors read it; when the effect shows (now/near unlock months/later years); one watch item tied to these values.
+- Suggestions — 4–6 short sentences: metric-specific actions to change outcomes for THESE numbers (e.g., stagger unlocks, add liquidity, extend locks, alter rewards). Be concrete and time-bound.
 
 METRICS (with simple impact cues)
 
@@ -893,16 +897,16 @@ METRICS (with simple impact cues)
 PRICE IMPACT LINE (required)
 - Start with “Price Impact —”.
 - Write 4–6  sentences tied to the CURRENT STAT values:
-  * What the current number(s) usually cause in price (up/down/more swings/steadier).
-  * How investors read THIS number (more risk vs less risk; faster to sell vs likely to hold).
-  * Timing: now, near large unlock months, or in later years (based on the metric).
-  * One watch item tied directly to these values (e.g., “watch months above 10%”, “watch HHI near 0.25”).
+  What the current number(s) usually cause in price (up/down/more swings/steadier).
+  How investors read THIS number (more risk vs less risk; faster to sell vs likely to hold).
+  Timing: now, near large unlock months, or in later years (based on the metric).
+  One watch item tied directly to these values (e.g., “watch months above 10%”, “watch HHI near 0.25”).
 
 SUGGESTIONS LINE (required)
 - Start with “Suggestions —”.
 - Write 4–6 sentences with metric-specific actions or suggestions that modify outcomes for THESE numbers & make the tokenomics more optimised:
-  * Examples: stagger or split large unlock months; add buy-side liquidity near big months; extend locks; add vesting; widen community programs; adjust reward rules; coordinate market makers; time catalysts to heavy emission windows; publish calendars and dashboards.
-  * Keep actions concrete yet detailed and time-bound (e.g., “add depth two weeks before and after 15%+ months”).
+  Examples: stagger or split large unlock months; add buy-side liquidity near big months; extend locks; add vesting; widen community programs; adjust reward rules; coordinate market makers; time catalysts to heavy emission windows; publish calendars and dashboards.
+  Keep actions concrete yet detailed and time-bound (e.g., “add depth two weeks before and after 15%+ months”).
 
 MISSING DATA
 - If a metric or sub-value is absent in JSON, omit that metric or that bullet without comment.
