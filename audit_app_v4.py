@@ -940,7 +940,7 @@ Here front-loaded / moderate / back-loaded means -
 - Suggestions — Split or stagger 10–15% and 15%+ months. Add liquidity two weeks before and after big months. Coordinate market-makers and publish reminders 30 days ahead.  """.strip()
 
         response = client.chat.completions.create(
-            model="gpt-5",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": "You are a Graet Tokenomics audit analyst.With years of expierence in auditinf tokenomics for projects"},
                 {"role": "user", "content": analysis_prompt}
