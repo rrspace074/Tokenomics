@@ -792,15 +792,23 @@ STYLE RULES
 - Rounding: % to 0 decimals (use 1 decimal if <1% or when a ratio needs it). Show ratios as % when natural (e.g., Liquidity Shield).
 - Tone: direct, neutral, no emojis.
 
-OUTPUT FORMAT 
-- Purpose — one line describing what the metric captures.
-Here (the description present for each metrices below should be here, like for YOY Inflation -    Here front-loaded / moderate / back-loaded means -
-    • Front-loaded: early years are ≥20% higher than late years on average.
-    • Back-loaded: late years are ≥20% higher than early years.
-    • Moderate: neither is ≥20% higher. simmilarly for others)
-- STAT — Impact — one line with the numbers and a plain interpretation (what high/low means).
-- Price Impact — 4–6 short sentences: what the current number(s) are likely to cause; how investors read it; when the effect shows (now/near unlock months/later years); one watch item tied to these values.
-- Suggestions — 4–6 short sentences: metric-specific actions to change outcomes for THESE numbers (e.g., stagger unlocks, add liquidity, extend locks, alter rewards). Be concrete and time-bound.
+DOCUMENT STRUCTURE
+Use this exact markdown structure for each metric:
+
+## [Metric Name]
+
+**Purpose:** [One line describing what the metric captures]
+
+**Here [classification options] means:**
+    • [Classification 1]: [Definition]
+    • [Classification 2]: [Definition]
+    • [Classification 3]: [Definition]
+
+**STAT — Impact:** [Current values] — [classification result]
+
+**Price Impact —** [4-6 sentences explaining price implications, investor behavior, timing, and watch items]
+
+**Suggestions —** [4-6 sentences with specific, time-bound actions to modify outcomes]
 
 METRICS (with simple impact cues)
 
