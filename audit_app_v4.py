@@ -782,162 +782,50 @@ INPUT
 {json.dumps(metrics, indent=2)}
 </metrics>
 
-STYLE RULES
-- For each metric: one-line Purpose, then “STAT — Impact”, then “Price Impact —”, then “Suggestions —”.
-- Output ONLY bullets (each line starts with "- "). No paragraphs.
-- Use short, clear sentences. Explain cause → effect. No buzzwords.
-  Use: “more/fewer tokens released”, “more/less selling pressure”, “price may fall/rise”, “few holders/many holders”.
-  Avoid: overhang, rerating, premium/discount, legitimacy, runway, cliffs (say “large unlock months”).
-- If any value is missing in JSON, omit that bullet. Do not mention missing data.
-- Rounding: % to 0 decimals (use 1 decimal if <1% or when a ratio needs it). Show ratios as % when natural (e.g., Liquidity Shield).
-- Tone: direct, neutral, no emojis.
+ROLE
+You are a senior tokenomics analyst. Use ONLY the JSON inside <metrics>. Do not add numbers, labels, or ranges that aren’t in the JSON.
 
-DOCUMENT STRUCTURE
-Use this exact markdown structure for each metric:
+INPUT
+<metrics>
+{json.dumps(metrics, indent=2)}
+</metrics>
 
-## [Metric Name]
+STYLE
+- Keep it concise, institutional, and clear.
+- Use simple words: “more/fewer tokens released”, “more/less selling pressure”, “price may fall/rise”, “few holders/many holders”.
+- Avoid: “overhang”, “premium/discount”, “runway”, “cliffs” (say “large unlock months”).
+- If a value is missing, skip that line. Do not mention missing data.
+- Round % to 0 decimals (use 1 decimal if <1% or for ratios). Show ratios as %.
+- Do not add explanations outside the requested sections. No preamble or wrap-up.
 
-**Purpose:** [One line describing what the metric captures]
+OUTPUT FORMAT (repeat the block below for each metric present in the JSON)
+Metric: <Metric Name> — Definition: <Plain one-line definition + list exact data points from JSON. Example: “YoY inflation Y1: X%, Y2: Y%, … Y6: Z%.”>
 
-**Here [classification options] means:**
-    • [Classification 1]: [Definition]
-    • [Classification 2]: [Definition]
-    • [Classification 3]: [Definition]
+Analysis: <2–3 short lines on what the numbers imply about token release timing, size, and holder impact. Keep it factual, cause → effect.>
 
-**STAT — Impact:** [Current values] — [classification result]
+Price Impact: <2–3 short lines on near-term price effects given these values. Say “likely positive/negative/mixed” and why. Mention timing if relevant (e.g., “near large unlock months”).>
 
-**Price Impact —** [4-6 sentences explaining price implications, investor behavior, timing, and watch items]
+Suggestion: 
+- <Specific, actionable step tied to these values and timing.>
+- <Second concrete step to reduce selling pressure or improve depth/holder mix.>
+- <(Optional) Third step with a timeframe or trigger condition.>
 
-**Suggestions —** [4-6 sentences with specific, time-bound actions to modify outcomes]
+RULES PER COMMON METRICS (use only if these keys exist in <metrics>; otherwise skip)
+- YoY Inflation (Y1–Y6): List Y1…Y6 exactly. If JSON includes a profile tag, you may cite it; otherwise do not add labels.
+- Supply Shock Bins: Print “0–5%: <m0-5> | 5–10%: <m5-10> | 10–15%: <m10-15> | 15%+: <m15p>; >10% months: <share>%”. If JSON includes a release profile (diffuse/mixed/concentrated), you may include it; otherwise skip.
+- Governance HHI: Print “HHI: <value>”. If a qualitative band is included in JSON, you may include it; otherwise skip.
+- Liquidity Shield Ratio: Print “Shield: <ratio>%”. If JSON includes a coverage band (below/at/above 100%), you may include it; otherwise skip.
 
-METRICS (with simple impact cues)
+EXAMPLE SKELETON (placeholders only; fill using JSON values)
+Metric: YoY Inflation — Definition: Year-over-year growth in circulating supply. Y1: <%>, Y2: <%>, Y3: <%>, Y4: <%>, Y5: <%>, Y6: <%>.
+Analysis: Early years show <higher/lower> % → more/fewer tokens released early. Later years show <trend> → selling pressure may <ease/intensify>.
+Price Impact: Likely <positive/negative/mixed>. Near early unlocks, price may <fall/rise> if depth is <low/high>. Watch large unlock months.
+Suggestion:
+- Spread sales from large months into smaller monthly releases.
+- Add market-maker depth before high-unlock windows.
+- Use vesting/earn programs to keep more tokens with active users.
 
-1) YoY Inflation (Y1–Y6)
-   Purpose: Year-over-year growth in circulating supply across the first six years.
-   Here front-loaded / moderate / back-loaded means -
-    • Front-loaded: early years are ≥20% higher than late years on average.
-    • Back-loaded: late years are ≥20% higher than early years.
-    • Moderate: neither is ≥20% higher.
-   STAT: “Y1, Y2, Y3, Y4, Y5, Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — <front-loaded/moderate/back-loaded> inflation profile.”
-   Impact cues: High in early years → more new tokens arrive early; later years lower → selling pressure usually eases over time.
-
-2) Supply Shock bins (0–5%, 5–10%, 10–15%, 15%+) and % months >10%
-   Purpose: Size and frequency of monthly unlocks.
-   Here diffuse / mixed / concentrated means - how bunched the big months are.
-    • Concentrated: ≥30% of months are >10% or there are ≥2 months at 15%+.
-    • Diffuse: ≤20% of months are >10% and none at 15%+.
-    • Mixed: everything in between.
-   STAT: “0–5%: <m0-5> | 5–10%: <m5-10> | 10–15%: <m10-15> | 15%+: <m15p>; >10% months: <share>% — <diffuse/mixed/concentrated> release profile.”
-   Impact cues: More months above 10% → price often weak near those months; more 10–15%/15%+ months → unlocks bunch up and can move price.
-
-3) Governance HHI
-   Purpose: How concentrated token ownership is.
-   Here low / moderate / high means -
-    • Low: <0.15 (many holders).
-    • Moderate: 0.15–0.25.
-    • High: >0.25 (few holders can decide).
-   STAT: “HHI: <hhi> — <low/moderate/high> concentration.”
-   Impact cues: Higher HHI → a small group can steer votes; lower HHI → decisions are spread out.
-
-4) Liquidity Shield Ratio
-   Purpose: Liquidity funds vs. sellable token value at launch.
-   Here below / at / above 100% coverage means -
-    • Below: depth is smaller than sellable value.
-    • At: roughly equal.
-    • Above: depth exceeds sellable value.
-   STAT: “Shield: <ratio>% — <below/at/above> 100% coverage.”
-   Impact cues: Below 100% → not enough buy support if many sell at launch; at/above 100% → selling is easier to absorb.
-
-5) Lockup Ratio (Supply share ≥12m and Pool share ≥12m)
-   Purpose: Share of tokens and pools locked for at least 12 months.
-   Here tight / loose free-float path means -
-    • Tight: Supply ≥12m ≥50% or Pool ≥12m ≥50% (fewer tokens can trade early).
-    • Loose: both below 50% (more tokens can trade early).
-   STAT: “Supply ≥12m: <slock>% | Pool ≥12m: <plock>% — <tight/loose> free-float path.”
-   Impact cues: Higher lockups → fewer tokens can trade early → steadier price; lower lockups → more tokens can hit the market → choppier price.
-
-6) VC Dominance (%)
-   Purpose: Share held by venture/sponsor pools.
-   Here elevated / modest means -
-    • Elevated: ≥25% (few funds control a large share).
-    • Modest: <25% (lower chance of large, coordinated sells).
-   STAT: “VC: <vc>% — <elevated/modest> sponsor control.”
-   Impact cues: Higher share → a few funds can influence votes and selling; lower share → less chance of large, coordinated sells.
-
-7) Community Control Index (%)
-   Purpose: Share held or earned by users/community pools.
-   Here strong / weak user alignment means -
-    • Strong: ≥40% user/community share.
-    • Weak: <40% user/community share.
-   STAT: “Community: <comm>% — <strong/weak> user alignment.”
-   Impact cues: Higher share → users have more say and tend to stay engaged; lower share → weaker community voice.
-
-8) Emission Taper (first 12m / last 12m)
-   Purpose: Compare tokens released early vs. late.
-   Here front-loaded / balanced / back-loaded means -
-    • Front-loaded: >1 (more tokens come early).
-    • Balanced: 0.9–1.1 (similar early and late).
-    • Back-loaded: <1 (more tokens come later).
-   STAT: “Taper: <taper>x — <front-loaded/balanced/back-loaded> schedule.”
-   Impact cues: >1 → more tokens released early → near-term pressure; <1 → more released later → early period calmer.
-
-9) Monte Carlo Survivability (min, p25, median, p75, p90, max)
-   Purpose: Stress test: translates many “what-if” scenarios into how often monthly supply was absorbed by typical buying.
-   Here min / p25 / med / p75 / p90 / max means -
-    • min: worst case across all paths (the lowest survivability %).
-    • p25: 25% of paths were at or below this; 75% did better.
-    • med: median (50th percentile). A typical outcome.
-    • p75: 75th percentile. 25% of paths did better; most did worse.
-    • p90: 90th percentile. Near best-case territory.
-    • max: best case across all paths.
-   STAT: “Survivability (min/p25/med/p75/p90/max): <min>/<p25>/<med>/<p75>/<p90>/<max> — <fragile/middle-of-pack/resilient> median.”
-   Impact cues: Higher median/upper values → more scenarios where price holds; lower values → more cases where releases are hard to absorb.
-
-10) Game Theory Score (0–5)
-    Purpose: How hard it is to game the incentive design.
-    Here robust / average / fragile means -
-     • Robust: 3.5–5.0 (rewards push users to help the network).
-     • Average: 2.0–3.4 (some safeguards; loopholes may remain).
-     • Fragile: 0–1.9 (easy to farm and dump without helping).
-    STAT: “GT Score: <gt>/5 — <robust/average/fragile> incentive design.”
-    Impact cues: Low score → people can game rewards or take value without helping; high score → rewards push people to help the network.
-
-PRICE IMPACT LINE (required)
-- Start with “Price Impact —”.
-- Write 4–6  sentences tied to the CURRENT STAT values:
-  What the current number(s) usually cause in price (up/down/more swings/steadier).
-  How investors read THIS number (more risk vs less risk; faster to sell vs likely to hold).
-  Timing: now, near large unlock months, or in later years (based on the metric).
-  One watch item tied directly to these values (e.g., “watch months above 10%”, “watch HHI near 0.25”).
-
-SUGGESTIONS LINE (required)
-- Start with “Suggestions —”.
-- Write 4–6 sentences with metric-specific actions or suggestions that modify outcomes for THESE numbers & make the tokenomics more optimised:
-  Examples: stagger or split large unlock months; add buy-side liquidity near big months; extend locks; add vesting; widen community programs; adjust reward rules; coordinate market makers; time catalysts to heavy emission windows; publish calendars and dashboards.
-  Keep actions concrete yet detailed and time-bound (e.g., “add depth two weeks before and after 15%+ months”).
-
-MISSING DATA
-- If a metric or sub-value is absent in JSON, omit that metric or that bullet without comment.
-
-EXAMPLE PATTERN (format only; do NOT invent numbers )
-
-- YoY Inflation — Year-over-year growth in circulating supply across the first six years.
-Here front-loaded / moderate / back-loaded means -
-    • Front-loaded: early years are ≥20% higher than late years on average.
-    • Back-loaded: late years are ≥20% higher than early years.
-    • Moderate: neither is ≥20% higher.
-- STAT — Impact — Y1–Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — front-loaded.
-- Price Impact — More new tokens arrive early, so price may dip or swing in the first years. As annual growth slows, price moves often calm. Many investors wait for later years before paying higher prices. Watch the Y1–Y2 values.
-- Suggestions — Add buy-side depth and clear comms in Y1–Y2. Time listings/partners after growth slows. Publish and socialize an unlock calendar.
-
-- Supply Shock — Size and frequency of monthly unlocks.
- Here diffuse / mixed / concentrated means - how bunched the big months are.
-    • Concentrated: ≥30% of months are >10% or there are ≥2 months at 15%+.
-    • Diffuse: ≤20% of months are >10% and none at 15%+.
-    • Mixed: everything in between.
-- STAT — Impact — 0–5%: <a> | 5–10%: <b> | 10–15%: <c> | 15%+: <d>; >10% months: <e>% — concentrated.
-- Price Impact — Large unlock months often pull price down near those dates. Many investors wait until after big unlocks to re-enter. Expect tighter pricing into unlock weeks. Watch the count of months above 10%.
-- Suggestions — Split or stagger 10–15% and 15%+ months. Add liquidity two weeks before and after big months. Coordinate market-makers and publish reminders 30 days ahead.  """.strip()
+(Repeat this block for each metric key found in <metrics> and stop.) """.strip()
 
         response = client.chat.completions.create(
             model="gpt-5-mini",
