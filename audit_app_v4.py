@@ -791,10 +791,10 @@ STYLE RULES
 - Rounding: % to 0 decimals (use 1 decimal if <1% or when a ratio needs it). Show ratios as % when natural (e.g., Liquidity Shield).
 - Tone: direct, neutral, no emojis.
 
-OUTPUT FORMAT (apply ONLY to metrics present in JSON)
-1) Purpose — one line describing what the metric captures.
-2) STAT — Impact — one line with the numbers and a plain interpretation (what high/low means).
-3) Price/Investor — 2–4 short sentences: what usually happens to price; how investors read the number; when the effect shows; what to watch.
+OUTPUT FORMAT (apply ONLY to metrics present in JSON). 
+1) Purpose — Describing what the metric captures properly in detail. Bold this pointer.
+2) STAT — Impact — one line with the numbers and a plain interpretation (what high/low means).Bold this pointer.
+3) Price/Investor — 2–4 short sentences: what usually happens to price; how investors read the number; when the effect shows; what to watch.Bold this pointer.
 4) (No label) — 2–4 short sentences in simple language: what it measures, why high/low matters, and one concrete action.
 5) output should be structured with bullet points not in paragraphs. 
 
@@ -911,6 +911,7 @@ Price/Investor — Large unlock months often pull price down near those dates. M
         t = re.sub(r"`([^`]*)`", r"\1", t)
         t = t.replace("**", "").replace("*", "") 
         t = re.sub(r'\n\s*\(([^\n]+)\)', r' (\1)', t)
+        t = t.replace("—", "-").replace("–", "-")
         return t.strip()
 
     def _find_logo_path():
