@@ -933,7 +933,7 @@ Here front-loaded / moderate / back-loaded means -
                 {"role": "system", "content": "You are a Graet Tokenomics audit analyst.With years of expierence in auditinf tokenomics for projects"},
                 {"role": "user", "content": analysis_prompt}
             ],
-            temperature=0.2
+            temperature=1
         )
         summary = response.choices[0].message.content
 
