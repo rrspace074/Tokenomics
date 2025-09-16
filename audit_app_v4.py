@@ -1500,20 +1500,15 @@ if generate:
                     pdf.set_xy(pdf.l_margin, pdf.get_y())
                     pdf.ln(0.5)
                     continue
-              # Purpose bullet — render as normal paragraph with label
+               # Purpose bullet — render as normal paragraph with label
                 if re.match(r'^purpose\b', content, flags=re.I):
                     left_margin = pdf.l_margin + INDENT
                     pdf.set_xy(left_margin, pdf.get_y())
-                    body = re.sub(r'^purpose\s*[—:-]?\s*', '', content, flags=re.I)
-
-                    try:
-                    if UNICODE_FONT and UNICODE_FONT_BOLD:
-                        pdf.set_font("DejaVu", "B", base_font_size)
-                    elif:
-                        pdf.set_font("DejaVu", "", base_font_size + 1)  # pseudo-bold
+                    if UNICODE_FONT:
+                        pdf.set_font("DejaVu", "", base_font_size)
                     else:
-                        pdf.set_font("Arial", "B", base_font_size)
-                    
+                        pdf.set_font("Arial", "", base_font_size)
+                    body = re.sub(r'^purpose\s*[—:-]?\s*', '', content, flags=re.I)
                     label = "Purpose- "
                     pdf.cell(pdf.get_string_width(label) + 1, line_h, sanitize_text(label), ln=0)
                     start_x = pdf.get_x()
