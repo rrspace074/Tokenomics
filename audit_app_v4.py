@@ -944,6 +944,7 @@ if generate:
 
     SECTION_TITLES = [
         "Red Flags",
+        "Section by Section Analysis",
         "YoY Inflation",
         "Supply Shock Bins",
         "Supply Shock",
@@ -1056,13 +1057,16 @@ if generate:
 
         st.markdown(f"<div class='analysis-section'>", unsafe_allow_html=True)
         # Distinct style for Red Flags
-        if title.lower().strip() == 'red flags':
+        key_title = title.lower().strip()
+        if key_title == 'red flags':
             st.markdown(f"<div class='analysis-title' style='color:#ff4d4f;'>🚩 {title}</div>", unsafe_allow_html=True)
+        elif key_title == 'section by section analysis':
+            st.markdown(f"<div class='analysis-title' style='font-size:1.3rem;'>{title}</div>", unsafe_allow_html=True)
         else:
             st.markdown(f"<div class='analysis-title'>{title}</div>", unsafe_allow_html=True)
         # Purpose (prefer explicit Purpose; fallback to subtitle)
         if purpose:
-            st.markdown(f"<div class='analysis-body'>{purpose}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='analysis-body'><b>Purpose -</b> {purpose}</div>", unsafe_allow_html=True)
         elif subtitle:
             st.markdown(f"<div class='analysis-body'>{subtitle}</div>", unsafe_allow_html=True)
         if stat:
@@ -1083,6 +1087,8 @@ if generate:
         # Price Impact bullet then remaining bullets
         if price_text:
             st.markdown(f"- Price Impact — {price_text}", unsafe_allow_html=True)
+        if tail_bullets:
+            st.markdown("<b>Suggestions -</b>", unsafe_allow_html=True)
         for item in tail_bullets:
             st.markdown(f"- {item}")
 
@@ -1316,13 +1322,18 @@ if generate:
                 current_section = title
                 inserted_image_for_current = False
                 pdf.ln(2)
-                # Render section title larger & bold (acts as a subtitle header)
-                pdf.set_text_color(80, 80, 80)
-                if UNICODE_FONT:
-                    pdf.set_font("DejaVu", "", base_font_size + 4)
+                # Render section title larger & bold; Heading 1 for top sections
+                is_redflags = (title.strip().lower() == 'red flags')
+                is_section2 = (title.strip().lower() == 'section by section analysis')
+                if is_redflags:
+                    pdf.set_text_color(200, 0, 0)
                 else:
-                    pdf.set_font("Arial", "B", base_font_size + 3)
-                pdf.multi_cell(effective_page_width, line_h + 2, sanitize_text(title_with_emoji(strip_md(title))))
+                    pdf.set_text_color(0, 0, 0)
+                if UNICODE_FONT:
+                    pdf.set_font("DejaVu", "", (base_font_size + 6) if (is_redflags or is_section2) else (base_font_size + 4))
+                else:
+                    pdf.set_font("Arial", "B", (base_font_size + 5) if (is_redflags or is_section2) else (base_font_size + 3))
+                pdf.multi_cell(effective_page_width, line_h + 3, sanitize_text(title_with_emoji(strip_md(title))))
                 # Subtitle (smaller / italic style)
                 if subtitle:
                     if UNICODE_FONT:
