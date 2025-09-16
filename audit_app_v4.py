@@ -1505,7 +1505,6 @@ if generate:
                     left_margin = pdf.l_margin + INDENT
                     pdf.set_xy(left_margin, pdf.get_y())
                     body = re.sub(r'^purpose\s*[—:-]?\s*', '', content, flags=re.I)
-
     # Bold label
     try:
         if UNICODE_FONT and UNICODE_FONT_BOLD:
@@ -1516,7 +1515,6 @@ if generate:
             pdf.set_font("Arial", "B", base_font_size)
     except Exception:
         pdf.set_font("Arial", "B", base_font_size)
-        
                     label = "Purpose: "
                     pdf.cell(pdf.get_string_width(label) + 1, line_h, sanitize_text(label), ln=0)
                     start_x = pdf.get_x()
