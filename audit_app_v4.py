@@ -677,7 +677,7 @@ GLOBAL RULES
 OUTPUT STRUCTURE
 
 1) Red Flags (first section)
-- List the top 4–5 risks as single-line bullets in the format:
+- List the top 3–5 risks as single-line bullets in the format:
   - <Cause with metric + value> → <Effect on float/liquidity/governance> → <Impact on price/investor trust>.
 - Choose the most material risks across all provided metrics.
 
@@ -963,6 +963,8 @@ if generate:
 
     def _split_title_subtitle(s: str, section_names: list[str]):
         raw = s.strip()
+        # Normalize: drop leading numbering/emojis/bullets like "1) ", "🚩 ", "- "
+        raw = re.sub(r'^(?:\d+\)|\d+\.|[\-\*•·]+|🚩|🔴|🟠|🟡|🔵|🔒|💼|👥|📉|🎲|🧠)\s*', '', raw)
         for name in section_names:
             if raw.lower().startswith(name.lower()):
                 rest = raw[len(name):].lstrip()
@@ -1053,7 +1055,11 @@ if generate:
         expl = sec.get('explainer') or []
 
         st.markdown(f"<div class='analysis-section'>", unsafe_allow_html=True)
-        st.markdown(f"<div class='analysis-title'>{title}</div>", unsafe_allow_html=True)
+        # Distinct style for Red Flags
+        if title.lower().strip() == 'red flags':
+            st.markdown(f"<div class='analysis-title' style='color:#ff4d4f;'>🚩 {title}</div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div class='analysis-title'>{title}</div>", unsafe_allow_html=True)
         # Purpose (prefer explicit Purpose; fallback to subtitle)
         if purpose:
             st.markdown(f"<div class='analysis-body'>{purpose}</div>", unsafe_allow_html=True)
@@ -1071,7 +1077,7 @@ if generate:
         if 'monte carlo' in key:
             key = 'monte carlo survivability'
         fig_to_show = fig_map.get(key)
-        if stat and fig_to_show is not None:
+        if stat and fig_to_show is not None and title.lower().strip() != 'red flags':
             st.pyplot(fig_to_show, clear_figure=False)
 
         # Price Impact bullet then remaining bullets
