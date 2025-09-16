@@ -651,6 +651,66 @@ def game_theory_audit(hhi, shield, inflation):
     return label, score
 
 # -----------------------------
+# Structured audit prompt helper
+# -----------------------------
+def build_structured_prompt(metrics: dict) -> str:
+    import json as _json
+    return (
+        f"""
+ROLE
+You are a senior tokenomics analyst. You audit token designs for investors and founders.
+Your output must be concise, structured, and institutional. Avoid fluff.
+Do not invent numbers — only use the values from <metrics>.
+
+INPUT
+<metrics>
+{_json.dumps(metrics, indent=2)}
+</metrics>
+
+OUTPUT STRUCTURE
+1. **🚩 Red Flags (first section)**
+   - List the top 3–5 tokenomics risks, with one-line cause -> effect analysis.
+   - Each item must include the specific metric value, why it’s a red flag, and the expected impact on price/investor trust.
+
+2. **Section by Section Analysis** (repeat for each metric below, in this exact format)
+
+   **[Metric Name] : Definition + Data**
+   - Define the metric in one sentence.
+   - Show the actual numbers clearly (e.g., “YoY Inflation Y1: 305%, Y2: 65%, …”).
+
+   **Analysis :**
+   - 2–3 sentences interpreting the values (risk if high, strength if low).
+
+   **Price Impact :**
+   - One line on how this influences price behavior and investor perception.
+
+   **Suggestions :**
+   - 2–3 actionable improvements (structural changes, communications, sinks, KPI-gating, etc.).
+
+Metrics to cover (use only if present in <metrics>):
+- 🟠 YoY Inflation (Y1–Y6)         -> metrics.yoy_inflation_pct
+- 🔴 Supply Shock bins + %>10%      -> metrics.shock_bins
+- 🟡 Governance HHI                 -> metrics.governance_hhi
+- 🔵 Liquidity Shield Ratio         -> metrics.liquidity_shield_ratio
+- 🔒 Lockup Ratio (supply & pools)  -> metrics.lockup_ratio_supply_pct, metrics.lockup_ratio_pools_pct
+- 💼 VC Dominance (%)               -> metrics.vc_dominance_pct
+- 👥 Community Control (%)          -> metrics.community_index_pct
+- 📉 Emission Taper ratio           -> metrics.emission_taper_ratio
+- 🎲 Monte Carlo summary            -> metrics.monte_carlo_summary_price_usd
+- 🧠 Game Theory Score              -> metrics.game_theory_score + metrics.game_theory_label
+
+3. **Final Summary (1–2 lines)**
+   - Institutional one-liner (FDV, float %, major strength, main risk).
+
+STYLE RULES
+- Use bold headers for each metric.
+- Keep bullets short and direct.
+- Always tie numbers -> interpretation -> price effect -> fix.
+- Avoid repeating definitions across metrics.
+        """.strip()
+    )
+
+# -----------------------------
 # Generate button (centered)
 # -----------------------------
 col_left, col_center, col_right = st.columns([4, 2, 4])
@@ -790,94 +850,7 @@ if generate:
     }
 
     with st.spinner("🤖 AI is analyzing your tokenomics..."):
-        analysis_prompt = f"""
-ROLE
-You are a senior tokenomics analyst preparing a structured audit report for institutional investors and founders.
-
-INPUT
-<metrics>
-{json.dumps(metrics, indent=2)}
-</metrics>
-
-INSTRUCTIONS
-- Use ONLY the provided data/metrics. Be concise and analytical. No definitions.
-- First output Red Flags as short bullets.
-- Then cover each metric using the exact headings below.
-- Keep the same labels as shown so downstream renderers can align content.
-
-OUTPUT FORMAT (STRICT)
-
-Red Flags
-- <risk + why it matters>
-- <risk + why it matters>
-
-YoY Inflation
-Purpose: Year-over-year growth in circulating supply across the first six years.
-STAT — Y1, Y2, Y3, Y4, Y5, Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — <front-loaded/moderate/back-loaded> inflation profile.
-- Price/Investor: <2–4 short sentences on price implications>
-- Improvement: <actionable suggestion 1>
-- Improvement: <actionable suggestion 2>
-
-Supply Shock Bins
-Purpose: Size and frequency of monthly unlocks.
-STAT — 0–5%: <a> | 5–10%: <b> | 10–15%: <c> | 15%+: <d>; >10% months: <e>% — <diffuse/mixed/concentrated> release profile.
-- Price/Investor: <impact on price/liquidity around big months>
-- Improvement: <actionable suggestion>
-
-Governance HHI
-Purpose: How concentrated token ownership is.
-STAT — HHI: <hhi> — <low/moderate/high> concentration.
-- Price/Investor: <implications>
-- Improvement: <actionable suggestion>
-
-Liquidity Shield Ratio
-Purpose: Liquidity funds vs. sellable token value at launch.
-STAT — Shield: <ratio>% — <below/at/above> 100% coverage.
-- Price/Investor: <implications>
-- Improvement: <actionable suggestion>
-
-Lockup Ratio
-Purpose: Share of tokens and pools locked for at least 12 months.
-STAT — Supply ≥12m: <slock>% | Pool ≥12m: <plock>% — <tight/loose> free-float path.
-- Price/Investor: <implications>
-- Improvement: <actionable suggestion>
-
-VC Dominance
-Purpose: Share held by venture/sponsor pools.
-STAT — VC: <vc>% — <elevated/modest> sponsor control.
-- Price/Investor: <implications>
-- Improvement: <actionable suggestion>
-
-Community Control Index
-Purpose: Share held or earned by users/community pools.
-STAT — Community: <comm>% — <strong/weak> user alignment.
-- Price/Investor: <implications>
-- Improvement: <actionable suggestion>
-
-Emission Taper
-Purpose: Compare tokens released early vs. late.
-STAT — Taper: <taper>x — <front-loaded/balanced/back-loaded> schedule.
-- Price/Investor: <implications>
-- Improvement: <actionable suggestion>
-
-Monte Carlo Survivability
-Purpose: Stress test: can typical buying absorb scheduled releases?
-STAT — Survivability (min/p25/med/p75/p90/max): <min>/<p25>/<med>/<p75>/<p90>/<max> — <fragile/middle/resilient> median.
-- Price/Investor: <implications>
-
-Game Theory Score
-Purpose: How hard it is to game the incentive design.
-STAT — GT Score: <gt>/5 — <robust/average/fragile> incentive design.
-- Price/Investor: <implications>
-
-TL;DR
-- <1–2 sentence bold summary for founders and investors>
-
-RULES
-- If any metric value is missing, omit that metric entirely.
-- Use % with 0 decimals (1 decimal if <1%).
-- Keep language direct and neutral.
-        """.strip()
+        analysis_prompt = build_structured_prompt(metrics)
 
         response = client.chat.completions.create(
             model="gpt-4o",
