@@ -655,60 +655,133 @@ def game_theory_audit(hhi, shield, inflation):
 # -----------------------------
 def build_structured_prompt(metrics: dict) -> str:
     import json as _json
-    return (
-        f"""
+    return f"""
 ROLE
 You are a senior tokenomics analyst. You audit token designs for investors and founders.
-Your output must be concise, structured, and institutional. Avoid fluff.
-Do not invent numbers — only use the values from <metrics>.
+Be concise, structured, and institutional. Avoid fluff.
+Do NOT invent numbers — only use values present inside <metrics>.
 
 INPUT
 <metrics>
 {_json.dumps(metrics, indent=2)}
 </metrics>
 
+GLOBAL RULES
+- Use ONLY metrics that exist in <metrics>. If a metric is missing, omit its section.
+- Use the EXACT section titles below (important for rendering).
+- For each section: include a one-line “Purpose — …” (definition) → “STAT:” line → “Price Impact — …” line → 2–3 “Suggestions:” bullets.
+- Keep bullets short and action-oriented. Tie numbers → interpretation → price effect → fix.
+- Values: keep units and significant figures; don’t round away meaning.
+- Do not repeat definitions across metrics; keep each definition to one clear sentence.
+
 OUTPUT STRUCTURE
-1. **🚩 Red Flags (first section)**
-   - List the top 3–5 tokenomics risks, with one-line cause -> effect analysis.
-   - Each item must include the specific metric value, why it’s a red flag, and the expected impact on price/investor trust.
 
-2. **Section by Section Analysis** (repeat for each metric below, in this exact format)
+1) Red Flags (first section)
+- List the top 3–5 risks as single-line bullets in the format:
+  - <Cause with metric + value> → <Effect on float/liquidity/governance> → <Impact on price/investor trust>.
+- Choose the most material risks across all provided metrics.
 
-   **[Metric Name] : Definition + Data**
-   - Define the metric in one sentence.
-   - Show the actual numbers clearly (e.g., “YoY Inflation Y1: 305%, Y2: 65%, …”).
+2) Section by Section Analysis (use only metrics that exist in <metrics>)
 
-   **Analysis :**
-   - 2–3 sentences interpreting the values (risk if high, strength if low).
+YoY Inflation
+Purpose — Define “YoY Inflation” in one sentence (change in circulating supply year over year).
+STAT: Y1: <y1%>, Y2: <y2%>, Y3: <y3%>, Y4: <y4%>, Y5: <y5%>, Y6: <y6%>.
+Price Impact — <One clear line on expected price/holder behavior given these %s>.
+Suggestions:
+- <Actionable fix #1 tied to mechanics/comms/sinks>
+- <Actionable fix #2>
+- <Actionable fix #3>
 
-   **Price Impact :**
-   - One line on how this influences price behavior and investor perception.
+Supply Shock Bins
+Purpose — Define “monthly supply shock” (monthly release as % of prior circulating) and why bins matter.
+STAT: 0–5%: <n0_5> | 5–10%: <n5_10> | 10–15%: <n10_15> | 15%+: <n15p>; >10% months: <share>% — <diffuse/mixed/concentrated> release profile.
+Price Impact — <One line on clustering near >10% months and expected drawdowns/liquidity needs>.
+Suggestions:
+- <Smooth or gate large unlocks via milestones/liquidity programs>
+- <Stagger cliffs; convert to linear with caps>
+- <Pre-announce market-making/liquidity buffers>
 
-   **Suggestions :**
-   - 2–3 actionable improvements (structural changes, communications, sinks, KPI-gating, etc.).
+Governance HHI
+Purpose — Define HHI as concentration index of token ownership/allocation (0–1, lower = more dispersed).
+STAT: HHI: <hhi>.
+Price Impact — <One line linking concentration to governance capture, sell pressure coordination, or signaling>.
+Suggestions:
+- <Broaden distribution, e.g., via community programs/lock-to-vote>
+- <Cap single-pool allocations/introduce decay>
+- <Strengthen quorum/anti-whale safeguards>
 
-Metrics to cover (use only if present in <metrics>):
-- 🟠 YoY Inflation (Y1–Y6)         -> metrics.yoy_inflation_pct
-- 🔴 Supply Shock bins + %>10%      -> metrics.shock_bins
-- 🟡 Governance HHI                 -> metrics.governance_hhi
-- 🔵 Liquidity Shield Ratio         -> metrics.liquidity_shield_ratio
-- 🔒 Lockup Ratio (supply & pools)  -> metrics.lockup_ratio_supply_pct, metrics.lockup_ratio_pools_pct
-- 💼 VC Dominance (%)               -> metrics.vc_dominance_pct
-- 👥 Community Control (%)          -> metrics.community_index_pct
-- 📉 Emission Taper ratio           -> metrics.emission_taper_ratio
-- 🎲 Monte Carlo summary            -> metrics.monte_carlo_summary_price_usd
-- 🧠 Game Theory Score              -> metrics.game_theory_score + metrics.game_theory_label
+Liquidity Shield Ratio
+Purpose — Define as Liquidity Fund / Sellable Mcap at TGE (higher = better defense).
+STAT: Liquidity Shield: <ratio>x; Sellable at TGE: <sellable_pct>% (<sellable_tokens> tokens); Sellable Mcap: $<sellable_mcap>.
+Price Impact — <One line on near-TGE volatility absorption and tail-risk>.
+Suggestions:
+- <Increase shield via larger liquidity fund/partner MM>
+- <Reduce sellable at TGE/limit initial float>
+- <Pair with fee rebates/LP incentives during volatile windows>
 
-3. **Final Summary (1–2 lines)**
-   - Institutional one-liner (FDV, float %, major strength, main risk).
+Lockup Ratio
+Purpose — Define as share of supply/pools with cliff ≥12 months (stickier float).
+STAT: Lockup (Supply): <lock_supply_pct>% | Lockup (Pools): <lock_pools_pct>% (eligibility: cliff ≥12m).
+Price Impact — <One line on early-months float tightness vs delayed overhang>.
+Suggestions:
+- <Raise cliff on strategic pools / align with product milestones>
+- <Introduce progressive vesting vs large cliffs>
+- <Offer lock-to-earn programs for communities/teams>
 
-STYLE RULES
-- Use bold headers for each metric.
-- Keep bullets short and direct.
-- Always tie numbers -> interpretation -> price effect -> fix.
-- Avoid repeating definitions across metrics.
-        """.strip()
-    )
+VC Dominance
+Purpose — Define as % of supply tagged “VC” (higher = potential sell/coordination risk).
+STAT: VC Dominance: <vc_pct>%.
+Price Impact — <One line on perceived overhang and investor signaling>.
+Suggestions:
+- <Redistribute via follow-on community rounds with lockups>
+- <Hard commit to extended VC lock/earn-out>
+- <Enhance disclosures on VC lock/participation>
+
+Community Control Index
+Purpose — Define as % of supply tagged “Community” (higher = alignment, usage flywheel).
+STAT: Community Control: <community_pct>%.
+Price Impact — <One line on adoption/retention vs speculation balance>.
+Suggestions:
+- <Route emissions to active users/revenue-linked rewards>
+- <Delegate grants via on-chain KPIs>
+- <Lock-to-use or usage-mining frameworks>
+
+Emission Taper
+Purpose — Define as ratio of tokens released in first 12m vs last 12m (front- vs back-loaded).
+STAT: Emission Taper: <taper_ratio>x.
+Price Impact — <One line on early sell pressure vs long-run sustainability>.
+Suggestions:
+- <Flatten early curve; move to milestone-gated linear>
+- <Cap monthly max unlocks>
+- <Tie emissions to real demand (users/revenue)>
+
+Monte Carlo Survivability
+Purpose — Define as distribution of simulated end-prices given buy/sell pressure model.
+STAT: USD — min: <min>, p25: <p25>, median: <median>, p75: <p75>, p90: <p90>, max: <max>.
+Price Impact — <One line on downside tails or upside skew and what drives it>.
+Suggestions:
+- <Reduce release rate in adverse months>
+- <Boost demand levers (ARPU, active users) before major unlocks>
+- <Add sinks/fees/redemptions>
+
+Game Theory Score
+Purpose — Define as composite score of structure (HHI, shield, inflation, etc.).
+STAT: Score: <score>/5 — <label>.
+Price Impact — <One line on overall investability/readiness for listings>.
+Suggestions:
+- <Target the weakest sub-metric from above>
+- <Publish a clear unlock/liquidity and governance policy>
+- <Stage reforms before major catalysts>
+
+3) Final Summary (1–2 lines)
+- One institutional line capturing float at TGE (<sellable_pct>% / $<sellable_mcap>), the standout strength, and the main risk.
+- If FDV or other fields are NOT present in <metrics>, do not mention them.
+
+STYLE GUIDANCE
+- Bold only the section headers (exact titles above).
+- Keep “Purpose — …”, “STAT: …”, “Price Impact — …”, then short “Suggestions:” bullets.
+- Never add sections not listed. Never fabricate numbers. Keep it tight and decision-useful.
+""".strip()
 
 # -----------------------------
 # Generate button (centered)
