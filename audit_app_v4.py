@@ -677,7 +677,7 @@ GLOBAL RULES
 OUTPUT STRUCTURE
 
 1) Red Flags (first section)
-- List the top 3–5 risks as single-line bullets in the format:
+- List the top 4–5 risks as single-line bullets in the format:
   - <Cause with metric + value> → <Effect on float/liquidity/governance> → <Impact on price/investor trust>.
 - Choose the most material risks across all provided metrics.
 
@@ -1431,7 +1431,8 @@ if generate:
                     pdf.set_font("DejaVu", "", base_font_size)
                 else:
                     pdf.set_font("Arial", "B", base_font_size)
-                pdf.cell(pdf.get_string_width(label) + 1, line_h, sanitize_text(label), ln=0)
+                safe_label = sanitize_text(label)
+                pdf.cell(pdf.get_string_width(safe_label) + 1, line_h, safe_label, ln=0)
                 body = re.sub(r"^(price\s*impact)\s*[—:-]?\s*", "", line, flags=re.I)
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "", base_font_size)
@@ -1563,7 +1564,8 @@ if generate:
                         pdf.set_font("DejaVu", "", base_font_size)
                     else:
                         pdf.set_font("Arial", "B", base_font_size)
-                    pdf.cell(pdf.get_string_width(label) + 1, line_h, sanitize_text(label), ln=0)
+                    safe_label = sanitize_text(label)
+                    pdf.cell(pdf.get_string_width(safe_label) + 1, line_h, safe_label, ln=0)
                     body = re.sub(r'^(price\s*impact)\s*[—:-]?\s*', '', content, flags=re.I)
                     if UNICODE_FONT:
                         pdf.set_font("DejaVu", "", base_font_size)
