@@ -142,6 +142,18 @@ st.markdown("""
         text-align: center;
         font-weight: bold;
     }
+
+    /* Analysis sections styling for consistent alignment */
+    .analysis-section { background: #111; border: 1px solid #2a2a2a; border-radius: 10px; padding: 1rem; margin: 1rem 0; }
+    .analysis-title { margin: 0 0 0.25rem 0; font-weight: 800; font-size: 1.1rem; color: #ffd166; }
+    .analysis-subtitle { margin: 0 0 0.5rem 0; color: #cfcfcf; font-style: italic; }
+    .analysis-stat { margin: 0.25rem 0; font-weight: 700; color: #ffffff; }
+    .analysis-price { margin: 0.35rem 0; }
+    .analysis-price b { color: #ffd166; }
+    .analysis-body { margin: 0.25rem 0; color: #eaeaea; }
+    .analysis-suggestions-title { margin: 0.5rem 0 0.25rem 0; font-weight: 700; color: #ffffff; }
+    .analysis-suggestions { margin: 0.25rem 0 0.5rem 1rem; }
+    .analysis-suggestions li { margin: 0.15rem 0; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -689,39 +701,32 @@ if generate:
     except Exception as e:
         st.markdown(f"<div class='warning-box'>Could not render Year 1 table: {e}</div>", unsafe_allow_html=True)
 
-    # Charts
-    colA, colB, colC = st.columns(3)
+    # Build figures (do not display here; will place under matching sections)
+    fig1, ax1 = plt.subplots(figsize=(6, 4))
+    years = list(range(1, len(inflation) + 1))
+    ax1.bar(years, inflation, alpha=0.8)
+    ax1.set_title("📈 Inflation Guard")
+    ax1.set_xlabel("Year"); ax1.set_ylabel("%"); ax1.grid(True, axis='y', alpha=0.3)
+    for x, val in zip(years, inflation):
+        ax1.text(x, val * 1.02, f"{val:.0f}%", ha='center', va='bottom', fontsize=9)
 
-    with colA:
-        fig1, ax1 = plt.subplots(figsize=(6, 4))
-        years = list(range(1, len(inflation) + 1))
-        ax1.bar(years, inflation, alpha=0.8)
-        ax1.set_title("📈 Inflation Guard")
-        ax1.set_xlabel("Year"); ax1.set_ylabel("%"); ax1.grid(True, axis='y', alpha=0.3)
-        for x, val in zip(years, inflation):
-            ax1.text(x, val * 1.02, f"{val:.0f}%", ha='center', va='bottom', fontsize=9)
-        st.pyplot(fig1)
+    fig2, ax2 = plt.subplots(figsize=(6, 4))
+    ordered_bins = ["0–5%", "5–10%", "10–15%", "15%+"]
+    ax2.bar(ordered_bins, [shock[b] for b in ordered_bins])
+    ax2.set_title("🛡️ Shock Stopper")
+    ax2.grid(True, axis='y', alpha=0.3)
 
-    with colB:
-        fig2, ax2 = plt.subplots(figsize=(6, 4))
-        ordered_bins = ["0–5%", "5–10%", "10–15%", "15%+"]
-        ax2.bar(ordered_bins, [shock[b] for b in ordered_bins])
-        ax2.set_title("🛡️ Shock Stopper")
-        ax2.grid(True, axis='y', alpha=0.3)
-        st.pyplot(fig2)
+    fig3, ax3 = plt.subplots(figsize=(6, 4))
+    if len(set(np.round(monte, 6))) > 1:
+        ax3.hist(monte, bins=min(20, len(set(np.round(monte, 6)))))
+        ax3.set_title("🎲 Monte Carlo Survivability")
+    else:
+        ax3.bar(["Simulated"], [monte[0]])
+        ax3.set_title("📊 Simulation Output")
+    ax3.grid(True, axis='y', alpha=0.3)
 
-    with colC:
-        fig3, ax3 = plt.subplots(figsize=(6, 4))
-        if len(set(np.round(monte, 6))) > 1:
-            ax3.hist(monte, bins=min(20, len(set(np.round(monte, 6)))))
-            ax3.set_title("🎲 Monte Carlo Survivability")
-        else:
-            ax3.bar(["Simulated"], [monte[0]])
-            ax3.set_title("📊 Simulation Output")
-        ax3.grid(True, axis='y', alpha=0.3)
-        st.pyplot(fig3)
-
-    # Supply shock (first 5 months excluding M0)
+    # Optional: supply shock early months figure (kept for future use, not auto-rendered)
+    fig_shock = None
     try:
         shocks = df.loc[1:5, ['Month', 'Supply Shock %']].copy()
         fig_shock, ax_shock = plt.subplots(figsize=(10, 4))
@@ -732,9 +737,8 @@ if generate:
         ax_shock.set_ylabel("%")
         for i, v in enumerate(values):
             ax_shock.text(i, v * 1.01, f"{v:.2f}%", ha='center', va='bottom', fontsize=9)
-        st.pyplot(fig_shock)
     except Exception:
-        pass
+        fig_shock = None
 
     # -----------------------------
     # Grounded AI analysis
@@ -782,185 +786,235 @@ INPUT
 {json.dumps(metrics, indent=2)}
 </metrics>
 
-ROLE
-You are a senior tokenomics analyst. Use ONLY the JSON provided in <metrics>. Do not invent values, ranges, or labels. Keep it concise, institutional, and punchy.
-
-INPUT
-<metrics>
-{json.dumps(metrics, indent=2)}
-</metrics>
-
-STYLE RULES
-- For each metric: one-line Purpose, then “STAT — Impact”, then “Price Impact —”, then “Suggestions —”.
-- Output ONLY bullets (each line starts with "- "). No paragraphs.
+STYLE RULES — EXACT TEMPLATE (NO DEFINITIONS)
+- For each metric present in <metrics>, output exactly these lines, in this order — nothing more, nothing less:
+  1) <Metric Name>            [standalone header line]
+  2) Purpose: <one-line purpose>
+  3) STAT — <numbers and brief impact phrase>
+  4) - Price/Investor: <2–4 short sentences tied to the STAT>
+  5) - <one additional concise bullet (plain language explanation or watch item)>
 - Use short, clear sentences. Explain cause → effect. No buzzwords.
   Use: “more/fewer tokens released”, “more/less selling pressure”, “price may fall/rise”, “few holders/many holders”.
-  Avoid: overhang, rerating, premium/discount, legitimacy, runway, cliffs (say “large unlock months”).
-- If any value is missing in JSON, omit that bullet. Do not mention missing data.
-- Rounding: % to 0 decimals (use 1 decimal if <1% or when a ratio needs it). Show ratios as % when natural (e.g., Liquidity Shield).
+  Avoid: overhang, rerating, premium/discount, legitimacy, runway; say “large unlock months” instead of “cliffs”.
+- If any value is missing in JSON, omit the whole metric.
+- Rounding: % to 0 decimals (use 1 decimal if <1%). Show ratios as % when natural (e.g., Liquidity Shield).
 - Tone: direct, neutral, no emojis.
-
-DOCUMENT STRUCTURE
-Use this exact markdown structure for each metric:
-
-## [Metric Name]
-
-Purpose: [One line describing what the metric captures]
-
-Here [classification options] means:
-    • [Classification 1]: [Definition]
-    • [Classification 2]: [Definition]
-    • [Classification 3]: [Definition]
-
-STAT — Impact: [Current values] — [classification result]
-
-Price Impact — [4-6 sentences explaining price implications, investor behavior, timing, and watch items]
-
-Suggestions — [4-6 sentences with specific, time-bound actions to modify outcomes]
 
 METRICS (with simple impact cues)
 
 1) YoY Inflation (Y1–Y6)
    Purpose: Year-over-year growth in circulating supply across the first six years.
-   Here front-loaded / moderate / back-loaded means -
-    • Front-loaded: early years are ≥20% higher than late years on average.
-    • Back-loaded: late years are ≥20% higher than early years.
-    • Moderate: neither is ≥20% higher.
    STAT: “Y1, Y2, Y3, Y4, Y5, Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — <front-loaded/moderate/back-loaded> inflation profile.”
-   Impact cues: High in early years → more new tokens arrive early; later years lower → selling pressure usually eases over time.
 
-2) Supply Shock bins (0–5%, 5–10%, 10–15%, 15%+) and % months >10%
+2) Supply Shock Bins (0–5%, 5–10%, 10–15%, 15%+) and % months >10%
    Purpose: Size and frequency of monthly unlocks.
-   Here diffuse / mixed / concentrated means - how bunched the big months are.
-    • Concentrated: ≥30% of months are >10% or there are ≥2 months at 15%+.
-    • Diffuse: ≤20% of months are >10% and none at 15%+.
-    • Mixed: everything in between.
    STAT: “0–5%: <m0-5> | 5–10%: <m5-10> | 10–15%: <m10-15> | 15%+: <m15p>; >10% months: <share>% — <diffuse/mixed/concentrated> release profile.”
-   Impact cues: More months above 10% → price often weak near those months; more 10–15%/15%+ months → unlocks bunch up and can move price.
 
 3) Governance HHI
    Purpose: How concentrated token ownership is.
-   Here low / moderate / high means -
-    • Low: <0.15 (many holders).
-    • Moderate: 0.15–0.25.
-    • High: >0.25 (few holders can decide).
    STAT: “HHI: <hhi> — <low/moderate/high> concentration.”
-   Impact cues: Higher HHI → a small group can steer votes; lower HHI → decisions are spread out.
 
 4) Liquidity Shield Ratio
    Purpose: Liquidity funds vs. sellable token value at launch.
-   Here below / at / above 100% coverage means -
-    • Below: depth is smaller than sellable value.
-    • At: roughly equal.
-    • Above: depth exceeds sellable value.
    STAT: “Shield: <ratio>% — <below/at/above> 100% coverage.”
-   Impact cues: Below 100% → not enough buy support if many sell at launch; at/above 100% → selling is easier to absorb.
-    5) Lockup Ratio (Supply share ≥12m and Pool share ≥12m)
+
+5) Lockup Ratio (Supply share ≥12m and Pool share ≥12m)
    Purpose: Share of tokens and pools locked for at least 12 months.
-   Here tight / loose free-float path means -
-    • Tight: Supply ≥12m ≥50% or Pool ≥12m ≥50% (fewer tokens can trade early).
-    • Loose: both below 50% (more tokens can trade early).
    STAT: “Supply ≥12m: <slock>% | Pool ≥12m: <plock>% — <tight/loose> free-float path.”
-   Impact cues: Higher lockups → fewer tokens can trade early → steadier price; lower lockups → more tokens can hit the market → choppier price.
 
 6) VC Dominance (%)
    Purpose: Share held by venture/sponsor pools.
-   Here elevated / modest means -
-    • Elevated: ≥25% (few funds control a large share).
-    • Modest: <25% (lower chance of large, coordinated sells).
    STAT: “VC: <vc>% — <elevated/modest> sponsor control.”
-   Impact cues: Higher share → a few funds can influence votes and selling; lower share → less chance of large, coordinated sells.
 
 7) Community Control Index (%)
    Purpose: Share held or earned by users/community pools.
-   Here strong / weak user alignment means -
-    • Strong: ≥40% user/community share.
-    • Weak: <40% user/community share.
    STAT: “Community: <comm>% — <strong/weak> user alignment.”
-   Impact cues: Higher share → users have more say and tend to stay engaged; lower share → weaker community voice.
 
-😍 Emission Taper (first 12m / last 12m)
+8) Emission Taper (first 12m / last 12m)
    Purpose: Compare tokens released early vs. late.
-   Here front-loaded / balanced / back-loaded means -
-    • Front-loaded: >1 (more tokens come early).
-    • Balanced: 0.9–1.1 (similar early and late).
-    • Back-loaded: <1 (more tokens come later).
    STAT: “Taper: <taper>x — <front-loaded/balanced/back-loaded> schedule.”
-   Impact cues: >1 → more tokens released early → near-term pressure; <1 → more released later → early period calmer.
 
 9) Monte Carlo Survivability (min, p25, median, p75, p90, max)
-   Purpose: Stress test: translates many “what-if” scenarios into how often monthly supply was absorbed by typical buying.
-   Here min / p25 / med / p75 / p90 / max means -
-    • min: worst case across all paths (the lowest survivability %).
-    • p25: 25% of paths were at or below this; 75% did better.
-    • med: median (50th percentile). A typical outcome.
-    • p75: 75th percentile. 25% of paths did better; most did worse.
-    • p90: 90th percentile. Near best-case territory.
-    • max: best case across all paths.
+   Purpose: Stress test: can typical buying absorb scheduled releases?
    STAT: “Survivability (min/p25/med/p75/p90/max): <min>/<p25>/<med>/<p75>/<p90>/<max> — <fragile/middle-of-pack/resilient> median.”
    Impact cues: Higher median/upper values → more scenarios where price holds; lower values → more cases where releases are hard to absorb.
 
 10) Game Theory Score (0–5)
     Purpose: How hard it is to game the incentive design.
-    Here robust / average / fragile means -
-     • Robust: 3.5–5.0 (rewards push users to help the network).
-     • Average: 2.0–3.4 (some safeguards; loopholes may remain).
-     • Fragile: 0–1.9 (easy to farm and dump without helping).
     STAT: “GT Score: <gt>/5 — <robust/average/fragile> incentive design.”
-    Impact cues: Low score → people can game rewards or take value without helping; high score → rewards push people to help the network.
-
-PRICE IMPACT LINE (required)
-- Start with “Price Impact —”.
-- Write 4–6  sentences tied to the CURRENT STAT values:
-  What the current number(s) usually cause in price (up/down/more swings/steadier).
-  How investors read THIS number (more risk vs less risk; faster to sell vs likely to hold).
-  Timing: now, near large unlock months, or in later years (based on the metric).
-  One watch item tied directly to these values (e.g., “watch months above 10%”, “watch HHI near 0.25”).
-   SUGGESTIONS LINE (required)
-- Start with “Suggestions —”.
-- Write 4–6 sentences with metric-specific actions or suggestions that modify outcomes for THESE numbers & make the tokenomics more optimised:
-  Examples: stagger or split large unlock months; add buy-side liquidity near big months; extend locks; add vesting; widen community programs; adjust reward rules; coordinate market makers; time catalysts to heavy emission windows; publish calendars and dashboards.
-  Keep actions concrete yet detailed and time-bound (e.g., “add depth two weeks before and after 15%+ months”).
+    
 
 MISSING DATA
-- If a metric or sub-value is absent in JSON, omit that metric or that bullet without comment.
+- If a metric or sub-value is absent in JSON, omit that metric or sub-line without comment.
 
-EXAMPLE PATTERN (format only; do NOT invent numbers )
+EXAMPLE PATTERN (format only; do NOT invent numbers)
+YoY Inflation
+Purpose: Year-over-year growth in circulating supply across the first six years.
+STAT — Y1, Y2, Y3, Y4, Y5, Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — front-loaded inflation profile.
+- Price/Investor: More new tokens arrive early, so prices can swing or dip in the first years. As annual growth slows, price moves often calm down. Many investors wait for the slow-down before paying higher prices. Watch the Y1–Y2 values.
+- More tokens come into the market in the beginning. Later, fewer new tokens arrive, which helps price hold steady.
 
-- YoY Inflation — Year-over-year growth in circulating supply across the first six years.
-Here front-loaded / moderate / back-loaded means -
-    • Front-loaded: early years are ≥20% higher than late years on average.
-    • Back-loaded: late years are ≥20% higher than early years.
-    • Moderate: neither is ≥20% higher.
-- STAT — Impact — Y1–Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — front-loaded.
-- Price Impact — More new tokens arrive early, so price may dip or swing in the first years. As annual growth slows, price moves often calm. Many investors wait for later years before paying higher prices. Watch the Y1–Y2 values.
-- Suggestions — Add buy-side depth and clear comms in Y1–Y2. Time listings/partners after growth slows. Publish and socialize an unlock calendar.
-
-- Supply Shock — Size and frequency of monthly unlocks.
- Here diffuse / mixed / concentrated means - how bunched the big months are.
-    • Concentrated: ≥30% of months are >10% or there are ≥2 months at 15%+.
-    • Diffuse: ≤20% of months are >10% and none at 15%+.
-    • Mixed: everything in between.
-- STAT — Impact — 0–5%: <a> | 5–10%: <b> | 10–15%: <c> | 15%+: <d>; >10% months: <e>% — concentrated.
-- Price Impact — Large unlock months often pull price down near those dates. Many investors wait until after big unlocks to re-enter. Expect tighter pricing into unlock weeks. Watch the count of months above 10%.
-- Suggestions — Split or stagger 10–15% and 15%+ months. Add liquidity two weeks before and after big months. Coordinate market-makers and publish reminders 30 days ahead.  """.strip()
+Supply Shock Bins
+Purpose: Size and frequency of monthly unlocks.
+STAT — 0–5%: <a> | 5–10%: <b> | 10–15%: <c> | 15%+: <d>; >10% months: <e>% — concentrated release profile.
+- Price/Investor: Large unlock months often pull price down near those dates. Many investors wait until after big unlocks to buy.
+- Watch the count of months above 10%; expect tighter pricing into unlock weeks.
+        """.strip()
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a Graet Tokenomics audit analyst.With years of expierence in auditinf tokenomics for projects"},
+                {"role": "system", "content": "You are a senior tokenomics audit analyst."},
                 {"role": "user", "content": analysis_prompt}
             ],
-            temperature=1
+            temperature=0.3
         )
         summary = response.choices[0].message.content
 
+    # Parse and render AI analysis into aligned sections with graphs placed contextually
     st.markdown("""
     <div class="metric-card">
         <h3>🤖 AI Tokenomics Analysis</h3>
     </div>
     """, unsafe_allow_html=True)
-    st.markdown(summary)
+
+    SECTION_TITLES = [
+        "YoY Inflation",
+        "Supply Shock Bins",
+        "Supply Shock",
+        "Supply Shock bins",
+        "Governance HHI",
+        "Liquidity Shield Ratio",
+        "Lockup Ratio",
+        "VC Dominance",
+        "Community Control Index",
+        "Emission Taper",
+        "Monte Carlo Survivability",
+        "Game Theory Score",
+    ]
+
+    def _strip_leading_bullets(s: str) -> str:
+        return re.sub(r'^[\s\-\*•·]+', '', s or '').strip()
+
+    def _split_title_subtitle(s: str, section_names: list[str]):
+        raw = s.strip()
+        for name in section_names:
+            if raw.lower().startswith(name.lower()):
+                rest = raw[len(name):].lstrip()
+                rest = re.sub(r'^(—|–|-|:)\s*', '', rest)
+                rest = re.sub(r'^\s{2,}', '', rest)
+                return (name, rest)
+        return None
+
+    def parse_ai_summary_sections(text: str):
+        lines = (text or '').replace('\r\n', '\n').replace('\r', '\n').split('\n')
+        # Find header indices
+        headers = []  # (idx, title, subtitle)
+        for i, raw in enumerate(lines):
+            nob = _strip_leading_bullets(raw)
+            split = _split_title_subtitle(nob, SECTION_TITLES)
+            if split:
+                headers.append((i, split[0], split[1]))
+        # If none detected, return one generic section
+        if not headers:
+            return [{
+                'title': 'Summary', 'subtitle': '', 'stat': '', 'price': '', 'explainer': [], 'suggestions': []
+            }]
+        sections = []
+        for h_idx, (idx, title, subtitle) in enumerate(headers):
+            end = headers[h_idx + 1][0] if h_idx + 1 < len(headers) else len(lines)
+            chunk = [l.strip() for l in lines[idx+1:end] if l.strip()]
+            purpose = ''
+            stat = ''
+            price_line = ''
+            tail_bullets = []
+            expl_paras = []
+            for ln in chunk:
+                nob = _strip_leading_bullets(ln)
+                # Purpose
+                if re.match(r'^purpose\b', nob, flags=re.I):
+                    purpose = re.sub(r'^purpose\s*[—:-]?\s*', '', nob, flags=re.I)
+                    continue
+                # STAT (accept both 'STAT' and 'Impact' labels)
+                if nob.upper().startswith('STAT') or nob.upper().startswith('IMPACT'):
+                    stat = re.sub(r"^(STAT|Impact)\s*(Impact)?\s*[:\-—]?\s*", '', nob, flags=re.I)
+                    continue
+                # Price/Investor (or Price Impact) — treat as a single bullet line
+                if re.match(r'^(price\s*impact|price/investor)\b', nob, flags=re.I):
+                    price_line = re.sub(r'^(price\s*impact|price/investor)\s*[:\-—]?\s*', '', nob, flags=re.I).strip()
+                    continue
+                # Bullet → suggestion
+                if re.match(r'^([\-\*•·]+)\s+.+$', ln):
+                    s = _strip_leading_bullets(ln)
+                    tail_bullets.append(s)
+                    continue
+                # Otherwise explainer paragraph
+                # Ignore any 'Here ... means -' lines to keep the layout minimal
+                if re.match(r'^here\b', nob, flags=re.I):
+                    continue
+                expl_paras.append(nob)
+            sections.append({
+                'title': title,
+                'subtitle': subtitle,
+                'purpose': purpose,
+                'stat': stat,
+                'price': price_line,
+                'tail_bullets': tail_bullets,
+                'explainer': expl_paras,
+            })
+        return sections
+
+    sections = parse_ai_summary_sections(summary)
+
+    # Map figures to sections
+    fig_map = {
+        'yoy inflation': fig1,
+        'supply shock': fig2,
+        'shock stopper': fig2,
+        'monte carlo survivability': fig3,
+        'monte carlo': fig3,
+    }
+
+    for sec in sections:
+        title = sec['title']
+        subtitle = sec.get('subtitle') or ''
+        purpose = sec.get('purpose') or ''
+        stat = sec.get('stat') or ''
+        price_text = sec.get('price') or ''
+        tail_bullets = sec.get('tail_bullets') or []
+        expl = sec.get('explainer') or []
+
+        st.markdown(f"<div class='analysis-section'>", unsafe_allow_html=True)
+        st.markdown(f"<div class='analysis-title'>{title}</div>", unsafe_allow_html=True)
+        # Purpose (prefer explicit Purpose; fallback to subtitle)
+        if purpose:
+            st.markdown(f"<div class='analysis-body'>{purpose}</div>", unsafe_allow_html=True)
+        elif subtitle:
+            st.markdown(f"<div class='analysis-body'>{subtitle}</div>", unsafe_allow_html=True)
+        if stat:
+            st.markdown(f"<div class='analysis-stat'>{stat}</div>", unsafe_allow_html=True)
+
+        # Place figure immediately after STAT
+        key = title.lower().strip()
+        if 'supply shock' in key:
+            key = 'supply shock'
+        if 'yoy' in key or 'year-over-year' in key:
+            key = 'yoy inflation'
+        if 'monte carlo' in key:
+            key = 'monte carlo survivability'
+        fig_to_show = fig_map.get(key)
+        if stat and fig_to_show is not None:
+            st.pyplot(fig_to_show)
+
+        # Price/Investor bullet then remaining bullets
+        if price_text:
+            st.markdown(f"- <b>Price/Investor:</b> {price_text}", unsafe_allow_html=True)
+        for item in tail_bullets:
+            st.markdown(f"- {item}")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+        # Divider between metrics
+        st.markdown("---")
 
     # -----------------------------
     # PDF Report
@@ -988,32 +1042,20 @@ Here front-loaded / moderate / back-loaded means -
         if os.path.exists(ttf):
             UNICODE_FONT = ttf
             break
+    # Optional bold unicode font (for true bold headings if available)
+    UNICODE_FONT_BOLD = None
+    for ttf in ["DejaVuSans-Bold.ttf", "NotoSans-Bold.ttf"]:
+        if os.path.exists(ttf):
+            UNICODE_FONT_BOLD = ttf
+            break
 
     def dash_safe(text: str) -> str:
         """Replace Unicode dashes with ASCII hyphen-minus for core fonts."""
         return (text or "").replace("—", "-").replace("–", "-")
 
     def title_with_emoji(title: str) -> str:
-        """Attach an emoji to known metric headings (falls back to plain if unicode not available)."""
-        base = title.strip()
-        if UNICODE_FONT:
-            EMO = {
-                "YoY Inflation": "📈 ",
-                "Supply Shock": "⚠️ ",
-                "Governance HHI": "🏛️ ",
-                "Liquidity Shield": "🛡️ ",
-                "Lockup Ratio": "🔒 ",
-                "VC Dominance": "💼 ",
-                "Community Control": "👥 ",
-                "Emission Taper": "📉 ",
-                "Monte Carlo": "🎲 ",
-                "Game Theory Score": "🎯 ",
-            }
-            for k, v in EMO.items():
-                if k.lower() in base.lower():
-                    return f"{v}{base}"
-        # Fallback if no unicode font
-        return base
+        """Return the plain title (no emojis) to match the desired format."""
+        return title.strip()
 
     class PDF(FPDF):
         def __init__(self, logo_path=None):
@@ -1034,6 +1076,8 @@ Here front-loaded / moderate / back-loaded means -
                 try:
                     if UNICODE_FONT:
                         self.add_font("DejaVu", "", UNICODE_FONT, uni=True)
+                        if UNICODE_FONT_BOLD:
+                            self.add_font("DejaVu", "B", UNICODE_FONT_BOLD, uni=True)
                         self.set_font("DejaVu", "", 16)
                     else:
                         self.set_font("Arial", "B", 16)
@@ -1070,29 +1114,59 @@ Here front-loaded / moderate / back-loaded means -
 
     def normalize_ai_summary(text: str) -> str:
         """
-        Insert smart breaks so 'Price Impact —' starts on its own line,
-        and tidy excessive spaces.
+        Insert smart breaks so 'Price Impact —' (or legacy 'Price/Investor —')
+        starts on its own line, and tidy excessive spaces.
         """
         if not text:
             return ""
         t = text.replace("\r\n", "\n").replace("\r", "\n")
-        # Break after STAT sentences when 'Price/Investor —' follows on the same line
-        t = re.sub(r"\.\s+Price/Investor\s+—\s+", ".\nPrice/Investor — ", t)
+        # Break after STAT sentences when 'Price Impact —' or 'Price/Investor —' follows on the same line
+        t = re.sub(r"\.\s+Price\s*Impact\s+—\s+", ".\nPrice Impact — ", t, flags=re.I)
+        t = re.sub(r"\.\s+Price/Investor\s+—\s+", ".\nPrice/Investor — ", t, flags=re.I)
         # Collapse long spaces
         t = re.sub(r"[ \t]+", " ", t)
         return t.strip()
 
-    def render_structured_summary(pdf: FPDF, summary_text: str, effective_page_width: float, base_font_size: int = 11):
+    def render_structured_summary(pdf: FPDF, summary_text: str, effective_page_width: float, base_font_size: int = 11, section_images: Optional[dict] = None):
         """
         Renders the AI summary preserving structure:
         - Headings like 'YoY Inflation — ...' become bold titles (with emojis if available) + italic subtitle.
-        - Lines beginning with 'Price Impact —' are emphasized and placed on a new line.
+        - Lines beginning with 'Price Impact —' (or 'Price/Investor —' legacy) are emphasized.
         - Lines starting with '- ' are bullets (kept).
         - Remaining lines are paragraphs.
         """
         BULLET = "•" if UNICODE_FONT else "\xb7"  # prefer solid bullet when unicode font available
         SECTION_SPACING = 2
         line_h = 7
+        BULLET_CELL_W = 3.5
+        INDENT = 6
+
+        def _insert_section_image_for(title: str):
+            if not section_images or not title:
+                return False
+            key = title.lower()
+            if 'supply shock' in key:
+                key_norm = 'supply shock'
+            elif 'yoy' in key or 'inflation' in key:
+                key_norm = 'yoy inflation'
+            elif 'monte carlo' in key:
+                key_norm = 'monte carlo'
+            else:
+                key_norm = key
+            path = None
+            if key_norm in section_images:
+                path = section_images[key_norm]
+            else:
+                for k, v in section_images.items():
+                    if k in key_norm:
+                        path = v; break
+            if path and os.path.exists(path):
+                pdf.ln(1)
+                fig_width = effective_page_width
+                pdf.image(path, x=pdf.l_margin, w=fig_width)
+                pdf.ln(2)
+                return True
+            return False
 
         def _strip_leading_bullets(s: str) -> str:
             # Remove any leading bullet markers and surrounding spaces: -, *, •, ·
@@ -1135,6 +1209,7 @@ Here front-loaded / moderate / back-loaded means -
         lines = normalize_ai_summary(summary_text).splitlines()
         SECTION_TITLES = [
             "YoY Inflation",
+            "Supply Shock Bins",
             "Supply Shock",
             "Supply Shock bins",
             "Governance HHI",
@@ -1146,9 +1221,15 @@ Here front-loaded / moderate / back-loaded means -
             "Monte Carlo Survivability",
             "Game Theory Score",
         ]
+        current_section = None
+        inserted_image_for_current = False
         for raw in lines:
             line = raw.strip()
             if not line:
+                continue
+
+            # Skip definition helper lines like 'Here ... means -'
+            if re.match(r'^here\b', line, flags=re.I):
                 continue
 
             # Try to parse known section headers first (works for both "· YoY Inflation  ..." and "YoY Inflation — ...")
@@ -1156,6 +1237,9 @@ Here front-loaded / moderate / back-loaded means -
             split = _split_title_subtitle(line_nobullet, SECTION_TITLES)
             if split is not None:
                 title, subtitle = split
+                # New section starts
+                current_section = title
+                inserted_image_for_current = False
                 pdf.ln(2)
                 # Render section title larger & bold (acts as a subtitle header)
                 pdf.set_text_color(80, 80, 80)
@@ -1180,30 +1264,98 @@ Here front-loaded / moderate / back-loaded means -
                 pdf.ln(1)
                 continue
 
-            # If a line is a "STAT ..." bullet/line, render bold and drop the word 'STAT'
-            if line.upper().startswith("STAT"):
+            # Lines starting with '## ' should render bold without the '##'
+            m_hash = re.match(r'^##\s*(.+)$', line)
+            if m_hash:
+                text = strip_md(m_hash.group(1))
+                if UNICODE_FONT and 'DejaVu' in (pdf.font_family or '') and 'B' in (pdf.font_style or ''):
+                    # already bold, just render
+                    pass
+                try:
+                    if UNICODE_FONT and UNICODE_FONT_BOLD:
+                        pdf.set_font("DejaVu", "B", base_font_size)
+                    elif UNICODE_FONT:
+                        # Emulate bold with a slightly larger size
+                        pdf.set_font("DejaVu", "", base_font_size + 1)
+                    else:
+                        pdf.set_font("Arial", "B", base_font_size)
+                except Exception:
+                    pdf.set_font("Arial", "B", base_font_size)
+                pdf.multi_cell(effective_page_width, line_h, sanitize_text(text))
+                # Reset to body font
+                if UNICODE_FONT:
+                    pdf.set_font("DejaVu", "", base_font_size)
+                else:
+                    pdf.set_font("Arial", "", base_font_size)
+                pdf.ln(0.5)
+                continue
+
+            # If a line is a STAT/Impact line, render text (without the label); insert figure right after
+            if re.match(r"^(STAT|Impact)\b", line, flags=re.I):
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "", base_font_size)
                 else:
                     pdf.set_font("Arial", "B", base_font_size)
-                left_margin = pdf.l_margin + 2
+                left_margin = pdf.l_margin + INDENT
                 cur_y = pdf.get_y()
                 pdf.set_xy(left_margin, cur_y)
-                # Cleanup: remove 'STAT:' prefix and expand 'Y1–Y6:' pattern
-                clean = re.sub(r"^STAT\s*[:\-—]\s*", "", line, flags=re.I)
+                # Cleanup: remove 'STAT'/'STAT Impact' prefix and expand 'Y1–Y6:' pattern
+                clean = re.sub(r"^(STAT|Impact)\s*(Impact)?\s*[:\-—]?\s*", "", line, flags=re.I)
                 clean = re.sub(r"Y1\s*[–-]?\s*Y6\s*:\s*", "Y1, Y2, Y3, Y4, Y5, Y6: ", clean)
                 clean = re.sub(r"Y1Y6\s*:\s*", "Y1, Y2, Y3, Y4, Y5, Y6: ", clean)
-                pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(clean)))
+                # For YoY Inflation, bold the label prefix 'Y1, Y2, Y3, Y4, Y5, Y6:' and keep the rest normal
+                did_split = False
+                if current_section and 'yoy' in current_section.lower():
+                    m = re.match(r"^(\s*Y\s*1\s*,\s*Y\s*2\s*,\s*Y\s*3\s*,\s*Y\s*4\s*,\s*Y\s*5\s*,\s*Y\s*6\s*:)\s*(.*)$", strip_md(clean), flags=re.I)
+                    if m:
+                        label_txt = m.group(1).strip() + ' '
+                        body_txt = m.group(2).strip()
+                        # Bold label
+                        try:
+                            if UNICODE_FONT and UNICODE_FONT_BOLD:
+                                pdf.set_font("DejaVu", "B", base_font_size)
+                            elif UNICODE_FONT:
+                                pdf.set_font("DejaVu", "", base_font_size + 1)
+                            else:
+                                pdf.set_font("Arial", "B", base_font_size)
+                        except Exception:
+                            pdf.set_font("Arial", "B", base_font_size)
+                        pdf.cell(pdf.get_string_width(sanitize_text(label_txt)) + 1, line_h, sanitize_text(label_txt), ln=0)
+                        # Normal body
+                        if UNICODE_FONT:
+                            pdf.set_font("DejaVu", "", base_font_size)
+                        else:
+                            pdf.set_font("Arial", "", base_font_size)
+                        start_x = pdf.get_x()
+                        used_width = start_x - (pdf.l_margin + INDENT)
+                        pdf.multi_cell(effective_page_width - used_width, line_h, sanitize_text(body_txt))
+                        did_split = True
+                if not did_split:
+                    # Render full line in bold (fallback)
+                    try:
+                        if UNICODE_FONT and UNICODE_FONT_BOLD:
+                            pdf.set_font("DejaVu", "B", base_font_size)
+                        elif UNICODE_FONT:
+                            pdf.set_font("DejaVu", "", base_font_size + 1)
+                        else:
+                            pdf.set_font("Arial", "B", base_font_size)
+                    except Exception:
+                        pdf.set_font("Arial", "B", base_font_size)
+                    pdf.multi_cell(effective_page_width - INDENT, line_h, sanitize_text(strip_md(clean)))
                 pdf.set_xy(pdf.l_margin, pdf.get_y())
                 pdf.ln(0.5)
+                # Insert the figure once, immediately after STAT line
+                if not inserted_image_for_current:
+                    inserted_image_for_current = _insert_section_image_for(current_section)
                 continue
 
-            if line.lower().startswith("price/investor"):
-                # Render as a bullet item with a bold 'Price/Investor:' label
-                left_margin = pdf.l_margin + 2
+            # Price Impact or Price/Investor as bullets
+            if re.match(r"^(price\s*impact|price/investor)\b", line, flags=re.I):
+                # Render as bullet list with a bold 'Price Impact:' label prefix
+                left_margin = pdf.l_margin + INDENT
                 cur_y = pdf.get_y()
                 pdf.set_xy(left_margin, cur_y)
-                pdf.cell(3, line_h, BULLET, ln=0)
+                pdf.cell(BULLET_CELL_W, line_h, BULLET, ln=0)
                 label = "Price/Investor: "
                 if UNICODE_FONT:
                     # DejaVu regular only; simulate emphasis by regular
@@ -1211,13 +1363,13 @@ Here front-loaded / moderate / back-loaded means -
                 else:
                     pdf.set_font("Arial", "B", base_font_size)
                 pdf.cell(pdf.get_string_width(label) + 1, line_h, sanitize_text(label), ln=0)
-                body = re.sub(r"^price/investor\s*[—:-]\s*", "", line, flags=re.I)
+                body = re.sub(r"^(price\s*impact|price/investor)\s*[—:-]?\s*", "", line, flags=re.I)
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "", base_font_size)
                 else:
                     pdf.set_font("Arial", "", base_font_size)
                 start_x = pdf.get_x()
-                used_width = start_x - (pdf.l_margin + 2)
+                used_width = start_x - (pdf.l_margin + INDENT)
                 pdf.multi_cell(effective_page_width - used_width, line_h, sanitize_text(strip_md(body)))
                 pdf.set_xy(pdf.l_margin, pdf.get_y())
                 pdf.ln(0.5)
@@ -1227,53 +1379,140 @@ Here front-loaded / moderate / back-loaded means -
             m_bullet = re.match(r'^([\-\*•·]+)\s+(.*)$', raw)
             if m_bullet:
                 content = m_bullet.group(2).strip()
-                # Bullet line containing STAT → render as bold non-bullet line
-                if content.upper().startswith("STAT"):
+                # Skip definition bullets (Front-loaded / Back-loaded, Concentrated, etc.)
+                if re.match(r'^(front\-?loaded|back\-?loaded|moderate|concentrated|diffuse|mixed|low|high|below|at|above|tight|loose|elevated|modest|strong|weak|balanced)\s*:', content, flags=re.I):
+                    continue
+                # Bullet line that begins with '## ' → bold content without the hashes
+                m_b_content = re.match(r'^##\s*(.+)$', content)
+                if m_b_content:
+                    btxt = strip_md(m_b_content.group(1))
+                    left_margin = pdf.l_margin + INDENT
+                    cur_y = pdf.get_y()
+                    pdf.set_xy(left_margin, cur_y)
+                    pdf.cell(BULLET_CELL_W, line_h, BULLET, ln=0)
+                    try:
+                        if UNICODE_FONT and UNICODE_FONT_BOLD:
+                            pdf.set_font("DejaVu", "B", base_font_size)
+                        elif UNICODE_FONT:
+                            pdf.set_font("DejaVu", "", base_font_size + 1)
+                        else:
+                            pdf.set_font("Arial", "B", base_font_size)
+                    except Exception:
+                        pdf.set_font("Arial", "B", base_font_size)
+                    start_x = pdf.get_x()
+                    used_width = start_x - (pdf.l_margin + INDENT)
+                    pdf.multi_cell(effective_page_width - used_width, line_h, sanitize_text(btxt))
+                    # Reset font to body
+                    if UNICODE_FONT:
+                        pdf.set_font("DejaVu", "", base_font_size)
+                    else:
+                        pdf.set_font("Arial", "", base_font_size)
+                    pdf.set_xy(pdf.l_margin, pdf.get_y())
+                    pdf.ln(0.5)
+                    continue
+                # Purpose bullet — render as normal paragraph with label
+                if re.match(r'^purpose\b', content, flags=re.I):
+                    left_margin = pdf.l_margin + INDENT
+                    pdf.set_xy(left_margin, pdf.get_y())
+                    if UNICODE_FONT:
+                        pdf.set_font("DejaVu", "", base_font_size)
+                    else:
+                        pdf.set_font("Arial", "", base_font_size)
+                    body = re.sub(r'^purpose\s*[—:-]?\s*', '', content, flags=re.I)
+                    label = "Purpose: "
+                    pdf.cell(pdf.get_string_width(label) + 1, line_h, sanitize_text(label), ln=0)
+                    start_x = pdf.get_x()
+                    used_width = start_x - (pdf.l_margin + INDENT)
+                    pdf.multi_cell(effective_page_width - used_width, line_h, sanitize_text(strip_md(body)))
+                    pdf.set_xy(pdf.l_margin, pdf.get_y())
+                    pdf.ln(0.5)
+                    continue
+                # STAT bullet — render as plain line (YoY: bold label prefix), then insert figure
+                if content.upper().startswith("STAT") or content.upper().startswith("IMPACT"):
                     if UNICODE_FONT:
                         pdf.set_font("DejaVu", "", base_font_size)
                     else:
                         pdf.set_font("Arial", "B", base_font_size)
-                    left_margin = pdf.l_margin + 2
+                    left_margin = pdf.l_margin + INDENT
                     cur_y = pdf.get_y()
                     pdf.set_xy(left_margin, cur_y)
-                    clean = re.sub(r"^STAT\s*[:\-—]\s*", "", content, flags=re.I)
+                    clean = re.sub(r"^(STAT|Impact)\s*(Impact)?\s*[:\-—]?\s*", "", content, flags=re.I)
                     clean = re.sub(r"Y1\s*[–-]?\s*Y6\s*:\s*", "Y1, Y2, Y3, Y4, Y5, Y6: ", clean)
                     clean = re.sub(r"Y1Y6\s*:\s*", "Y1, Y2, Y3, Y4, Y5, Y6: ", clean)
-                    pdf.multi_cell(effective_page_width - 2, line_h, sanitize_text(strip_md(clean)))
+                    # YoY partial bold handling
+                    did_split = False
+                    if current_section and 'yoy' in current_section.lower():
+                        m = re.match(r"^(\s*Y\s*1\s*,\s*Y\s*2\s*,\s*Y\s*3\s*,\s*Y\s*4\s*,\s*Y\s*5\s*,\s*Y\s*6\s*:)\s*(.*)$", strip_md(clean), flags=re.I)
+                        if m:
+                            label_txt = m.group(1).strip() + ' '
+                            body_txt = m.group(2).strip()
+                            try:
+                                if UNICODE_FONT and UNICODE_FONT_BOLD:
+                                    pdf.set_font("DejaVu", "B", base_font_size)
+                                elif UNICODE_FONT:
+                                    pdf.set_font("DejaVu", "", base_font_size + 1)
+                                else:
+                                    pdf.set_font("Arial", "B", base_font_size)
+                            except Exception:
+                                pdf.set_font("Arial", "B", base_font_size)
+                            pdf.cell(pdf.get_string_width(sanitize_text(label_txt)) + 1, line_h, sanitize_text(label_txt), ln=0)
+                            if UNICODE_FONT:
+                                pdf.set_font("DejaVu", "", base_font_size)
+                            else:
+                                pdf.set_font("Arial", "", base_font_size)
+                            start_x = pdf.get_x()
+                            used_width = start_x - (pdf.l_margin + INDENT)
+                            pdf.multi_cell(effective_page_width - used_width, line_h, sanitize_text(body_txt))
+                            did_split = True
+                    if not did_split:
+                        try:
+                            if UNICODE_FONT and UNICODE_FONT_BOLD:
+                                pdf.set_font("DejaVu", "B", base_font_size)
+                            elif UNICODE_FONT:
+                                pdf.set_font("DejaVu", "", base_font_size + 1)
+                            else:
+                                pdf.set_font("Arial", "B", base_font_size)
+                        except Exception:
+                            pdf.set_font("Arial", "B", base_font_size)
+                        pdf.multi_cell(effective_page_width - INDENT, line_h, sanitize_text(strip_md(clean)))
                     pdf.set_xy(pdf.l_margin, pdf.get_y())
                     pdf.ln(0.5)
+                    if not inserted_image_for_current:
+                        inserted_image_for_current = _insert_section_image_for(current_section)
                     continue
-                # Bullet line with Price/Investor → bullet + bold label
-                if content.lower().startswith("price/investor"):
-                    left_margin = pdf.l_margin + 2
+                # Price Impact/Price/Investor bullet — bullet + bold label
+                if re.match(r'^(price\s*impact|price/investor)\b', content, flags=re.I):
+                    left_margin = pdf.l_margin + INDENT
                     cur_y = pdf.get_y()
                     pdf.set_xy(left_margin, cur_y)
-                    pdf.cell(3, line_h, BULLET, ln=0)
+                    pdf.cell(BULLET_CELL_W, line_h, BULLET, ln=0)
                     label = "Price/Investor: "
                     if UNICODE_FONT:
                         pdf.set_font("DejaVu", "", base_font_size)
                     else:
                         pdf.set_font("Arial", "B", base_font_size)
                     pdf.cell(pdf.get_string_width(label) + 1, line_h, sanitize_text(label), ln=0)
-                    body = re.sub(r"^price/investor\s*[—:-]\s*", "", content, flags=re.I)
+                    body = re.sub(r'^(price\s*impact|price/investor)\s*[—:-]?\s*', '', content, flags=re.I)
                     if UNICODE_FONT:
                         pdf.set_font("DejaVu", "", base_font_size)
                     else:
                         pdf.set_font("Arial", "", base_font_size)
                     start_x = pdf.get_x()
-                    used_width = start_x - (pdf.l_margin + 2)
+                    used_width = start_x - (pdf.l_margin + INDENT)
                     pdf.multi_cell(effective_page_width - used_width, line_h, sanitize_text(strip_md(body)))
                     pdf.set_xy(pdf.l_margin, pdf.get_y())
                     pdf.ln(0.5)
                     continue
 
-                # Generic bullets (retain for normal body items)
+                # Generic bullets (Suggestions or other) — keep bullets aligned
                 rest = strip_md(content)
-                bullet_text = f"{BULLET} {rest}"
-                left_margin = pdf.l_margin + 4
+                left_margin = pdf.l_margin + INDENT
                 cur_y = pdf.get_y()
                 pdf.set_xy(left_margin, cur_y)
-                pdf.multi_cell(effective_page_width - 4, line_h, sanitize_text(bullet_text))
+                pdf.cell(BULLET_CELL_W, line_h, BULLET, ln=0)
+                start_x = pdf.get_x()
+                used_width = start_x - (pdf.l_margin + INDENT)
+                pdf.multi_cell(effective_page_width - used_width, line_h, sanitize_text(rest))
                 pdf.set_xy(pdf.l_margin, pdf.get_y())
                 pdf.ln(0.5)
                 continue
@@ -1305,12 +1544,15 @@ Here front-loaded / moderate / back-loaded means -
                     pdf.ln(1)
                     continue
 
-            # Price/Investor emphasis (already handled above)
+            # Price Impact emphasis handled above
 
             # Generic non-bullet fallback paragraph
             pdf.set_x(pdf.l_margin)
             pdf.multi_cell(effective_page_width, line_h, sanitize_text(strip_md(line)))
             pdf.ln(1)
+
+        # After finishing all lines, add a small separation
+        pdf.ln(2)
 
     def save_fig_temp(fig, name):
         path = os.path.join(tempfile.gettempdir(), name)
@@ -1332,6 +1574,8 @@ Here front-loaded / moderate / back-loaded means -
     if UNICODE_FONT:
         try:
             pdf.add_font("DejaVu", "", UNICODE_FONT, uni=True)
+            if UNICODE_FONT_BOLD:
+                pdf.add_font("DejaVu", "B", UNICODE_FONT_BOLD, uni=True)
             pdf.set_font("DejaVu", "", 11)
         except Exception:
             pdf.set_font("Arial", size=11)
@@ -1340,27 +1584,15 @@ Here front-loaded / moderate / back-loaded means -
 
     effective_page_width = pdf.w - 2 * pdf.l_margin
 
-    # Render the AI summary with preserved structure (titles + bullets + Price/Investor line breaks)
-    render_structured_summary(pdf, summary, effective_page_width, base_font_size=11)
-
-    # Start a fresh page for figures
-    pdf.add_page()
-    pdf.set_font("Arial", "B", 12)
-    pdf.multi_cell(0, 8, "Figures")
-    pdf.ln(2)
-
-    figs = [
-        ("Inflation Guard", img_infl),
-        ("Shock Stopper", img_shock),
-        ("Monte Carlo Survivability", img_sim),
-    ]
-    for title, fig_path in figs:
-        pdf.set_font("Arial", "B", 11)
-        pdf.multi_cell(0, 7, sanitize_text(title))
-        # Fit figure to content width inside margins
-        fig_width = pdf.w - pdf.l_margin - pdf.r_margin
-        pdf.image(fig_path, x=pdf.l_margin, w=fig_width)
-        pdf.ln(5)
+    # Render the AI summary with preserved structure and embed matching figures inline
+    section_images = {
+        'yoy inflation': img_infl,
+        'supply shock': img_shock,
+        'shock stopper': img_shock,
+        'monte carlo survivability': img_sim,
+        'monte carlo': img_sim,
+    }
+    render_structured_summary(pdf, summary, effective_page_width, base_font_size=11, section_images=section_images)
 
     pdf.ln(4)
     pdf.set_font("Arial", "B", 12)
