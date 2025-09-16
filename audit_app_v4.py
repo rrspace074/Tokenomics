@@ -792,86 +792,91 @@ if generate:
     with st.spinner("🤖 AI is analyzing your tokenomics..."):
         analysis_prompt = f"""
 ROLE
-You are a senior tokenomics analyst. Use ONLY the JSON provided in <metrics>. Do not invent values, ranges, or labels. Keep it concise, institutional, and punchy.
+You are a senior tokenomics analyst preparing a structured audit report for institutional investors and founders.
 
 INPUT
 <metrics>
 {json.dumps(metrics, indent=2)}
 </metrics>
 
-STYLE RULES — EXACT TEMPLATE (NO DEFINITIONS)
-- For each metric present in <metrics>, output exactly these lines, in this order — nothing more, nothing less:
-  1) <Metric Name>            [standalone header line]
-  2) Purpose: <one-line purpose>
-  3) STAT — <numbers and brief impact phrase>
-  4) - Price/Investor: <2–4 short sentences tied to the STAT>
-  5) - <one additional concise bullet (plain language explanation or watch item)>
-- Use short, clear sentences. Explain cause → effect. No buzzwords.
-  Use: “more/fewer tokens released”, “more/less selling pressure”, “price may fall/rise”, “few holders/many holders”.
-  Avoid: overhang, rerating, premium/discount, legitimacy, runway; say “large unlock months” instead of “cliffs”.
-- If any value is missing in JSON, omit the whole metric.
-- Rounding: % to 0 decimals (use 1 decimal if <1%). Show ratios as % when natural (e.g., Liquidity Shield).
-- Tone: direct, neutral, no emojis.
+INSTRUCTIONS
+- Use ONLY the provided data/metrics. Be concise and analytical. No definitions.
+- First output Red Flags as short bullets.
+- Then cover each metric using the exact headings below.
+- Keep the same labels as shown so downstream renderers can align content.
 
-METRICS (with simple impact cues)
+OUTPUT FORMAT (STRICT)
 
-1) YoY Inflation (Y1–Y6)
-   Purpose: Year-over-year growth in circulating supply across the first six years.
-   STAT: “Y1, Y2, Y3, Y4, Y5, Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — <front-loaded/moderate/back-loaded> inflation profile.”
+Red Flags
+- <risk + why it matters>
+- <risk + why it matters>
 
-2) Supply Shock Bins (0–5%, 5–10%, 10–15%, 15%+) and % months >10%
-   Purpose: Size and frequency of monthly unlocks.
-   STAT: “0–5%: <m0-5> | 5–10%: <m5-10> | 10–15%: <m10-15> | 15%+: <m15p>; >10% months: <share>% — <diffuse/mixed/concentrated> release profile.”
-
-3) Governance HHI
-   Purpose: How concentrated token ownership is.
-   STAT: “HHI: <hhi> — <low/moderate/high> concentration.”
-
-4) Liquidity Shield Ratio
-   Purpose: Liquidity funds vs. sellable token value at launch.
-   STAT: “Shield: <ratio>% — <below/at/above> 100% coverage.”
-
-5) Lockup Ratio (Supply share ≥12m and Pool share ≥12m)
-   Purpose: Share of tokens and pools locked for at least 12 months.
-   STAT: “Supply ≥12m: <slock>% | Pool ≥12m: <plock>% — <tight/loose> free-float path.”
-
-6) VC Dominance (%)
-   Purpose: Share held by venture/sponsor pools.
-   STAT: “VC: <vc>% — <elevated/modest> sponsor control.”
-
-7) Community Control Index (%)
-   Purpose: Share held or earned by users/community pools.
-   STAT: “Community: <comm>% — <strong/weak> user alignment.”
-
-8) Emission Taper (first 12m / last 12m)
-   Purpose: Compare tokens released early vs. late.
-   STAT: “Taper: <taper>x — <front-loaded/balanced/back-loaded> schedule.”
-
-9) Monte Carlo Survivability (min, p25, median, p75, p90, max)
-   Purpose: Stress test: can typical buying absorb scheduled releases?
-   STAT: “Survivability (min/p25/med/p75/p90/max): <min>/<p25>/<med>/<p75>/<p90>/<max> — <fragile/middle-of-pack/resilient> median.”
-   Impact cues: Higher median/upper values → more scenarios where price holds; lower values → more cases where releases are hard to absorb.
-
-10) Game Theory Score (0–5)
-    Purpose: How hard it is to game the incentive design.
-    STAT: “GT Score: <gt>/5 — <robust/average/fragile> incentive design.”
-    
-
-MISSING DATA
-- If a metric or sub-value is absent in JSON, omit that metric or sub-line without comment.
-
-EXAMPLE PATTERN (format only; do NOT invent numbers)
 YoY Inflation
 Purpose: Year-over-year growth in circulating supply across the first six years.
-STAT — Y1, Y2, Y3, Y4, Y5, Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — front-loaded inflation profile.
-- Price/Investor: More new tokens arrive early, so prices can swing or dip in the first years. As annual growth slows, price moves often calm down. Many investors wait for the slow-down before paying higher prices. Watch the Y1–Y2 values.
-- More tokens come into the market in the beginning. Later, fewer new tokens arrive, which helps price hold steady.
+STAT — Y1, Y2, Y3, Y4, Y5, Y6: <v1>, <v2>, <v3>, <v4>, <v5>, <v6>% — <front-loaded/moderate/back-loaded> inflation profile.
+- Price/Investor: <2–4 short sentences on price implications>
+- Improvement: <actionable suggestion 1>
+- Improvement: <actionable suggestion 2>
 
 Supply Shock Bins
 Purpose: Size and frequency of monthly unlocks.
-STAT — 0–5%: <a> | 5–10%: <b> | 10–15%: <c> | 15%+: <d>; >10% months: <e>% — concentrated release profile.
-- Price/Investor: Large unlock months often pull price down near those dates. Many investors wait until after big unlocks to buy.
-- Watch the count of months above 10%; expect tighter pricing into unlock weeks.
+STAT — 0–5%: <a> | 5–10%: <b> | 10–15%: <c> | 15%+: <d>; >10% months: <e>% — <diffuse/mixed/concentrated> release profile.
+- Price/Investor: <impact on price/liquidity around big months>
+- Improvement: <actionable suggestion>
+
+Governance HHI
+Purpose: How concentrated token ownership is.
+STAT — HHI: <hhi> — <low/moderate/high> concentration.
+- Price/Investor: <implications>
+- Improvement: <actionable suggestion>
+
+Liquidity Shield Ratio
+Purpose: Liquidity funds vs. sellable token value at launch.
+STAT — Shield: <ratio>% — <below/at/above> 100% coverage.
+- Price/Investor: <implications>
+- Improvement: <actionable suggestion>
+
+Lockup Ratio
+Purpose: Share of tokens and pools locked for at least 12 months.
+STAT — Supply ≥12m: <slock>% | Pool ≥12m: <plock>% — <tight/loose> free-float path.
+- Price/Investor: <implications>
+- Improvement: <actionable suggestion>
+
+VC Dominance
+Purpose: Share held by venture/sponsor pools.
+STAT — VC: <vc>% — <elevated/modest> sponsor control.
+- Price/Investor: <implications>
+- Improvement: <actionable suggestion>
+
+Community Control Index
+Purpose: Share held or earned by users/community pools.
+STAT — Community: <comm>% — <strong/weak> user alignment.
+- Price/Investor: <implications>
+- Improvement: <actionable suggestion>
+
+Emission Taper
+Purpose: Compare tokens released early vs. late.
+STAT — Taper: <taper>x — <front-loaded/balanced/back-loaded> schedule.
+- Price/Investor: <implications>
+- Improvement: <actionable suggestion>
+
+Monte Carlo Survivability
+Purpose: Stress test: can typical buying absorb scheduled releases?
+STAT — Survivability (min/p25/med/p75/p90/max): <min>/<p25>/<med>/<p75>/<p90>/<max> — <fragile/middle/resilient> median.
+- Price/Investor: <implications>
+
+Game Theory Score
+Purpose: How hard it is to game the incentive design.
+STAT — GT Score: <gt>/5 — <robust/average/fragile> incentive design.
+- Price/Investor: <implications>
+
+TL;DR
+- <1–2 sentence bold summary for founders and investors>
+
+RULES
+- If any metric value is missing, omit that metric entirely.
+- Use % with 0 decimals (1 decimal if <1%).
+- Keep language direct and neutral.
         """.strip()
 
         response = client.chat.completions.create(
