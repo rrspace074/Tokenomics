@@ -1348,6 +1348,8 @@ if generate:
                     pdf.set_font("DejaVu", "", base_font_size)
                 else:
                     pdf.set_font("Arial", "", base_font_size)
+                # Hard reset X to left margin to avoid any drift before section body
+                pdf.set_x(pdf.l_margin)
                 pdf.ln(1)
                 continue
 
