@@ -1189,6 +1189,8 @@ if generate:
         t = (text or "").strip()
         if UNICODE_FONT:
             return t  # keep unicode (emojis)
+        # Replace unicode dashes with ASCII hyphen before latin-1 encoding to avoid dropping ranges like 0–5%
+        t = dash_safe(t)
         # ensure latin-1 safe for default Arial
         return t.encode("latin-1", "ignore").decode("latin-1")
 
