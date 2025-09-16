@@ -1037,6 +1037,23 @@ if generate:
 
     sections = parse_ai_summary_sections(summary)
 
+    # Remove duplicate 'Game Theory Score' sections, keep only the last one
+    def _dedupe_keep_last(sections_list, title_name):
+        last_index = None
+        for idx, sec in enumerate(sections_list):
+            if (sec.get('title') or '').strip().lower() == title_name.lower():
+                last_index = idx
+        if last_index is None:
+            return sections_list
+        out = []
+        for idx, sec in enumerate(sections_list):
+            if (sec.get('title') or '').strip().lower() == title_name.lower() and idx != last_index:
+                continue
+            out.append(sec)
+        return out
+
+    sections = _dedupe_keep_last(sections, 'Game Theory Score')
+
     # Map figures to sections
     fig_map = {
         'yoy inflation': fig1,
