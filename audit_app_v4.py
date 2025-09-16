@@ -146,11 +146,11 @@ st.markdown("""
     /* Analysis sections styling for consistent alignment */
     .analysis-section { background: #111; border: 1px solid #2a2a2a; border-radius: 10px; padding: 1rem; margin: 1rem 0; }
     .analysis-title { margin: 0 0 0.25rem 0; font-weight: 800; font-size: 1.1rem; color: #ffd166; }
-    .analysis-subtitle { margin: 0 0 0.5rem 0; color: #cfcfcf; font-style: italic; }
-    .analysis-stat { margin: 0.25rem 0; font-weight: 700; color: #ffffff; }
-    .analysis-price { margin: 0.35rem 0; }
-    .analysis-price b { color: #ffd166; }
-    .analysis-body { margin: 0.25rem 0; color: #eaeaea; }
+    .analysis-subtitle { margin: 0 0 0.5rem 0; color: #333333; font-style: italic; }
+    .analysis-stat { margin: 0.25rem 0; font-weight: 700; color: #000000; }
+    .analysis-price { margin: 0.35rem 0; color: #000000; }
+    .analysis-price b { color: #ffb703; }
+    .analysis-body { margin: 0.25rem 0; color: #000000; }
     .analysis-suggestions-title { margin: 0.5rem 0 0.25rem 0; font-weight: 700; color: #ffffff; }
     .analysis-suggestions { margin: 0.25rem 0 0.5rem 1rem; }
     .analysis-suggestions li { margin: 0.15rem 0; }
@@ -702,28 +702,41 @@ if generate:
         st.markdown(f"<div class='warning-box'>Could not render Year 1 table: {e}</div>", unsafe_allow_html=True)
 
     # Build figures (do not display here; will place under matching sections)
+    # TDeFi theme colors
+    tdefi_yellow = "#ffb703"  # warm yellow
+    tdefi_orange = "#fd7e14"
+
     fig1, ax1 = plt.subplots(figsize=(6, 4))
     years = list(range(1, len(inflation) + 1))
-    ax1.bar(years, inflation, alpha=0.8)
-    ax1.set_title("📈 Inflation Guard")
-    ax1.set_xlabel("Year"); ax1.set_ylabel("%"); ax1.grid(True, axis='y', alpha=0.3)
-    for x, val in zip(years, inflation):
-        ax1.text(x, val * 1.02, f"{val:.0f}%", ha='center', va='bottom', fontsize=9)
+    bars = ax1.bar(years, inflation, color=tdefi_yellow, alpha=0.95, edgecolor="#333333")
+    ax1.set_title("Inflation Guard", color="#000000")
+    ax1.set_xlabel("Year", color="#000000"); ax1.set_ylabel("%", color="#000000")
+    ax1.grid(True, axis='y', alpha=0.25)
+    # Set y-limits with headroom so labels don't collide with top
+    max_val = max(inflation) if len(inflation) else 0
+    ax1.set_ylim(0, max_val * 1.18 + (5 if max_val < 50 else 0))
+    for rect, val in zip(bars, inflation):
+        ax1.text(rect.get_x() + rect.get_width()/2.0, rect.get_height() * 1.02,
+                 f"{val:.0f}%", ha='center', va='bottom', fontsize=9, color="#000000")
+    ax1.tick_params(colors="#000000")
 
     fig2, ax2 = plt.subplots(figsize=(6, 4))
     ordered_bins = ["0–5%", "5–10%", "10–15%", "15%+"]
-    ax2.bar(ordered_bins, [shock[b] for b in ordered_bins])
-    ax2.set_title("🛡️ Shock Stopper")
-    ax2.grid(True, axis='y', alpha=0.3)
+    ax2.bar(ordered_bins, [shock[b] for b in ordered_bins], color=tdefi_orange, alpha=0.95, edgecolor="#333333")
+    ax2.set_title("Shock Stopper", color="#000000")
+    ax2.grid(True, axis='y', alpha=0.25)
+    ax2.tick_params(colors="#000000")
+    ax2.set_ylim(0, max([shock[b] for b in ordered_bins]) * 1.18 + 1)
 
     fig3, ax3 = plt.subplots(figsize=(6, 4))
     if len(set(np.round(monte, 6))) > 1:
-        ax3.hist(monte, bins=min(20, len(set(np.round(monte, 6)))))
-        ax3.set_title("🎲 Monte Carlo Survivability")
+        ax3.hist(monte, bins=min(20, len(set(np.round(monte, 6)))), color=tdefi_yellow, edgecolor="#333333")
+        ax3.set_title("Monte Carlo Survivability", color="#000000")
     else:
-        ax3.bar(["Simulated"], [monte[0]])
-        ax3.set_title("📊 Simulation Output")
-    ax3.grid(True, axis='y', alpha=0.3)
+        ax3.bar(["Simulated"], [monte[0]], color=tdefi_yellow, edgecolor="#333333")
+        ax3.set_title("Simulation Output", color="#000000")
+    ax3.grid(True, axis='y', alpha=0.25)
+    ax3.tick_params(colors="#000000")
 
     # Optional: supply shock early months figure (kept for future use, not auto-rendered)
     fig_shock = None
@@ -1004,7 +1017,7 @@ STAT — 0–5%: <a> | 5–10%: <b> | 10–15%: <c> | 15%+: <d>; >10% months: <e
             key = 'monte carlo survivability'
         fig_to_show = fig_map.get(key)
         if stat and fig_to_show is not None:
-            st.pyplot(fig_to_show)
+            st.pyplot(fig_to_show, clear_figure=False)
 
         # Price/Investor bullet then remaining bullets
         if price_text:
