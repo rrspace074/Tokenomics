@@ -1289,6 +1289,7 @@ if generate:
         lines = normalize_ai_summary(summary_text).splitlines()
         SECTION_TITLES = [
             "Red Flags",
+            "Section by Section Analysis",
             "YoY Inflation",
             "Supply Shock Bins",
             "Supply Shock",
@@ -1330,7 +1331,7 @@ if generate:
                 else:
                     pdf.set_text_color(0, 0, 0)
                 if UNICODE_FONT:
-                    pdf.set_font("DejaVu", "B", (base_font_size + 6) if (is_redflags or is_section2) else (base_font_size + 4))
+                    pdf.set_font("DejaVu", "", (base_font_size + 6) if (is_redflags or is_section2) else (base_font_size + 4))
                 else:
                     pdf.set_font("Arial", "B", (base_font_size + 5) if (is_redflags or is_section2) else (base_font_size + 3))
                 pdf.multi_cell(effective_page_width, line_h + 3, sanitize_text(title_with_emoji(strip_md(title))))
@@ -1435,6 +1436,54 @@ if generate:
                     inserted_image_for_current = _insert_section_image_for(current_section)
                 continue
 
+            # Purpose (non-bullet) — bold label + normal body
+            if re.match(r'^purpose\b', line, flags=re.I):
+                left_margin = pdf.l_margin + INDENT
+                pdf.set_xy(left_margin, pdf.get_y())
+                body = re.sub(r'^purpose\s*[—:-]?\s*', '', line, flags=re.I)
+                try:
+                    if UNICODE_FONT and UNICODE_FONT_BOLD:
+                        pdf.set_font("DejaVu", "B", base_font_size)
+                    elif UNICODE_FONT:
+                        pdf.set_font("DejaVu", "", base_font_size + 1)
+                    else:
+                        pdf.set_font("Arial", "B", base_font_size)
+                except Exception:
+                    pdf.set_font("Arial", "B", base_font_size)
+                label = "Purpose — "
+                pdf.cell(pdf.get_string_width(sanitize_text(label)) + 1, line_h, sanitize_text(label), ln=0)
+                if UNICODE_FONT:
+                    pdf.set_font("DejaVu", "", base_font_size)
+                else:
+                    pdf.set_font("Arial", "", base_font_size)
+                start_x = pdf.get_x()
+                used_width = start_x - (pdf.l_margin + INDENT)
+                pdf.multi_cell(effective_page_width - used_width, line_h, sanitize_text(strip_md(body)))
+                pdf.set_xy(pdf.l_margin, pdf.get_y())
+                pdf.ln(0.5)
+                continue
+
+            # Suggestions header (non-bullet) — bold line
+            if re.match(r'^suggestions?\s*[:\-—]?\s*$', line, flags=re.I):
+                left_margin = pdf.l_margin + INDENT
+                pdf.set_xy(left_margin, pdf.get_y())
+                try:
+                    if UNICODE_FONT and UNICODE_FONT_BOLD:
+                        pdf.set_font("DejaVu", "B", base_font_size)
+                    elif UNICODE_FONT:
+                        pdf.set_font("DejaVu", "", base_font_size + 1)
+                    else:
+                        pdf.set_font("Arial", "B", base_font_size)
+                except Exception:
+                    pdf.set_font("Arial", "B", base_font_size)
+                pdf.multi_cell(effective_page_width - INDENT, line_h, sanitize_text("Suggestions —"))
+                if UNICODE_FONT:
+                    pdf.set_font("DejaVu", "", base_font_size)
+                else:
+                    pdf.set_font("Arial", "", base_font_size)
+                pdf.ln(0.5)
+                continue
+
             # Price Impact bullet
             if re.match(r"^(price\s*impact)\b", line, flags=re.I):
                 # Render as bullet list with a 'Price Impact —' label prefix
@@ -1466,8 +1515,26 @@ if generate:
             m_bullet = re.match(r'^([\-\*•·]+)\s+(.*)$', raw)
             if m_bullet:
                 content = m_bullet.group(2).strip()
-                # Ignore explicit 'Suggestions:' header bullets
-                if re.match(r'^suggestions?\s*:\s*$', content, flags=re.I):
+                # Suggestions header (bullet) — bold line
+                if re.match(r'^suggestions?\s*[:\-—]?\s*$', content, flags=re.I):
+                    left_margin = pdf.l_margin + INDENT
+                    pdf.set_xy(left_margin, pdf.get_y())
+                    try:
+                        if UNICODE_FONT and UNICODE_FONT_BOLD:
+                            pdf.set_font("DejaVu", "B", base_font_size)
+                        elif UNICODE_FONT:
+                            pdf.set_font("DejaVu", "", base_font_size + 1)
+                        else:
+                            pdf.set_font("Arial", "B", base_font_size)
+                    except Exception:
+                        pdf.set_font("Arial", "B", base_font_size)
+                    pdf.multi_cell(effective_page_width - INDENT, line_h, sanitize_text("Suggestions —"))
+                    if UNICODE_FONT:
+                        pdf.set_font("DejaVu", "", base_font_size)
+                    else:
+                        pdf.set_font("Arial", "", base_font_size)
+                    pdf.set_xy(pdf.l_margin, pdf.get_y())
+                    pdf.ln(0.5)
                     continue
                 # Skip definition bullets (Front-loaded / Back-loaded, Concentrated, etc.)
                 if re.match(r'^(front\-?loaded|back\-?loaded|moderate|concentrated|diffuse|mixed|low|high|below|at|above|tight|loose|elevated|modest|strong|weak|balanced)\s*:', content, flags=re.I):
@@ -1500,17 +1567,26 @@ if generate:
                     pdf.set_xy(pdf.l_margin, pdf.get_y())
                     pdf.ln(0.5)
                     continue
-               # Purpose bullet — render as normal paragraph with label
+                # Purpose bullet — bold label + normal body
                 if re.match(r'^purpose\b', content, flags=re.I):
                     left_margin = pdf.l_margin + INDENT
                     pdf.set_xy(left_margin, pdf.get_y())
-                    if UNICODE_FONT:
-                        pdf.set_font("DejaVu", "B", base_font_size)
-                    else:
-                        pdf.set_font("Arial", "B", base_font_size)
                     body = re.sub(r'^purpose\s*[—:-]?\s*', '', content, flags=re.I)
-                    label = "Purpose- "
-                    pdf.cell(pdf.get_string_width(label) + 1, line_h, sanitize_text(label), ln=0)
+                    try:
+                        if UNICODE_FONT and UNICODE_FONT_BOLD:
+                            pdf.set_font("DejaVu", "B", base_font_size)
+                        elif UNICODE_FONT:
+                            pdf.set_font("DejaVu", "", base_font_size + 1)
+                        else:
+                            pdf.set_font("Arial", "B", base_font_size)
+                    except Exception:
+                        pdf.set_font("Arial", "B", base_font_size)
+                    label = "Purpose — "
+                    pdf.cell(pdf.get_string_width(sanitize_text(label)) + 1, line_h, sanitize_text(label), ln=0)
+                    if UNICODE_FONT:
+                        pdf.set_font("DejaVu", "", base_font_size)
+                    else:
+                        pdf.set_font("Arial", "", base_font_size)
                     start_x = pdf.get_x()
                     used_width = start_x - (pdf.l_margin + INDENT)
                     pdf.multi_cell(effective_page_width - used_width, line_h, sanitize_text(strip_md(body)))
