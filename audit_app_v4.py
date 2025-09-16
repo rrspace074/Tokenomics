@@ -943,6 +943,7 @@ if generate:
     """, unsafe_allow_html=True)
 
     SECTION_TITLES = [
+        "Red Flags",
         "YoY Inflation",
         "Supply Shock Bins",
         "Supply Shock",
@@ -1007,6 +1008,9 @@ if generate:
                 if re.match(r'^(price\s*impact|price/investor)\b', nob, flags=re.I):
                     price_line = re.sub(r'^(price\s*impact|price/investor)\s*[:\-—]?\s*', '', nob, flags=re.I).strip()
                     continue
+                # Ignore explicit 'Suggestions:' label lines per new prompt
+                if re.match(r'^suggestions?\s*:\s*$', nob, flags=re.I):
+                    continue
                 # Bullet → suggestion
                 if re.match(r'^([\-\*•·]+)\s+.+$', ln):
                     s = _strip_leading_bullets(ln)
@@ -1070,9 +1074,9 @@ if generate:
         if stat and fig_to_show is not None:
             st.pyplot(fig_to_show, clear_figure=False)
 
-        # Price/Investor bullet then remaining bullets
+        # Price Impact bullet then remaining bullets
         if price_text:
-            st.markdown(f"- <b>Price/Investor:</b> {price_text}", unsafe_allow_html=True)
+            st.markdown(f"- Price Impact — {price_text}", unsafe_allow_html=True)
         for item in tail_bullets:
             st.markdown(f"- {item}")
 
@@ -1272,6 +1276,7 @@ if generate:
 
         lines = normalize_ai_summary(summary_text).splitlines()
         SECTION_TITLES = [
+            "Red Flags",
             "YoY Inflation",
             "Supply Shock Bins",
             "Supply Shock",
@@ -1413,21 +1418,21 @@ if generate:
                     inserted_image_for_current = _insert_section_image_for(current_section)
                 continue
 
-            # Price Impact or Price/Investor as bullets
-            if re.match(r"^(price\s*impact|price/investor)\b", line, flags=re.I):
-                # Render as bullet list with a bold 'Price Impact:' label prefix
+            # Price Impact bullet
+            if re.match(r"^(price\s*impact)\b", line, flags=re.I):
+                # Render as bullet list with a 'Price Impact —' label prefix
                 left_margin = pdf.l_margin + INDENT
                 cur_y = pdf.get_y()
                 pdf.set_xy(left_margin, cur_y)
                 pdf.cell(BULLET_CELL_W, line_h, BULLET, ln=0)
-                label = "Price/Investor: "
+                label = "Price Impact — "
                 if UNICODE_FONT:
                     # DejaVu regular only; simulate emphasis by regular
                     pdf.set_font("DejaVu", "", base_font_size)
                 else:
                     pdf.set_font("Arial", "B", base_font_size)
                 pdf.cell(pdf.get_string_width(label) + 1, line_h, sanitize_text(label), ln=0)
-                body = re.sub(r"^(price\s*impact|price/investor)\s*[—:-]?\s*", "", line, flags=re.I)
+                body = re.sub(r"^(price\s*impact)\s*[—:-]?\s*", "", line, flags=re.I)
                 if UNICODE_FONT:
                     pdf.set_font("DejaVu", "", base_font_size)
                 else:
@@ -1443,6 +1448,9 @@ if generate:
             m_bullet = re.match(r'^([\-\*•·]+)\s+(.*)$', raw)
             if m_bullet:
                 content = m_bullet.group(2).strip()
+                # Ignore explicit 'Suggestions:' header bullets
+                if re.match(r'^suggestions?\s*:\s*$', content, flags=re.I):
+                    continue
                 # Skip definition bullets (Front-loaded / Back-loaded, Concentrated, etc.)
                 if re.match(r'^(front\-?loaded|back\-?loaded|moderate|concentrated|diffuse|mixed|low|high|below|at|above|tight|loose|elevated|modest|strong|weak|balanced)\s*:', content, flags=re.I):
                     continue
@@ -1544,19 +1552,19 @@ if generate:
                     if not inserted_image_for_current:
                         inserted_image_for_current = _insert_section_image_for(current_section)
                     continue
-                # Price Impact/Price/Investor bullet — bullet + bold label
-                if re.match(r'^(price\s*impact|price/investor)\b', content, flags=re.I):
+                # Price Impact bullet — bullet + bold label
+                if re.match(r'^(price\s*impact)\b', content, flags=re.I):
                     left_margin = pdf.l_margin + INDENT
                     cur_y = pdf.get_y()
                     pdf.set_xy(left_margin, cur_y)
                     pdf.cell(BULLET_CELL_W, line_h, BULLET, ln=0)
-                    label = "Price/Investor: "
+                    label = "Price Impact — "
                     if UNICODE_FONT:
                         pdf.set_font("DejaVu", "", base_font_size)
                     else:
                         pdf.set_font("Arial", "B", base_font_size)
                     pdf.cell(pdf.get_string_width(label) + 1, line_h, sanitize_text(label), ln=0)
-                    body = re.sub(r'^(price\s*impact|price/investor)\s*[—:-]?\s*', '', content, flags=re.I)
+                    body = re.sub(r'^(price\s*impact)\s*[—:-]?\s*', '', content, flags=re.I)
                     if UNICODE_FONT:
                         pdf.set_font("DejaVu", "", base_font_size)
                     else:
