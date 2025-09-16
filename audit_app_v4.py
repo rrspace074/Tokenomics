@@ -1500,37 +1500,28 @@ if generate:
                     pdf.set_xy(pdf.l_margin, pdf.get_y())
                     pdf.ln(0.5)
                     continue
-                # Purpose bullet — bold label + normal body
-if re.match(r'^purpose\b', content, flags=re.I):
-    left_margin = pdf.l_margin + INDENT
-    pdf.set_xy(left_margin, pdf.get_y())
-    body = re.sub(r'^purpose\s*[—:-]?\s*', '', content, flags=re.I)
+              # Purpose bullet — render as normal paragraph with label
+                if re.match(r'^purpose\b', content, flags=re.I):
+                    left_margin = pdf.l_margin + INDENT
+                    pdf.set_xy(left_margin, pdf.get_y())
+                    body = re.sub(r'^purpose\s*[—:-]?\s*', '', content, flags=re.I)
 
-    # Bold label
-    try:
-        if UNICODE_FONT and UNICODE_FONT_BOLD:
-            pdf.set_font("DejaVu", "B", base_font_size)
-        elif UNICODE_FONT:
-            pdf.set_font("DejaVu", "", base_font_size + 1)  # pseudo-bold
-        else:
-            pdf.set_font("Arial", "B", base_font_size)
-    except Exception:
-        pdf.set_font("Arial", "B", base_font_size)
-
-    label = "Purpose — "
-    pdf.cell(pdf.get_string_width(sanitize_text(label)) + 1, line_h, sanitize_text(label), ln=0)
-
-    # Normal body
-    if UNICODE_FONT:
-        pdf.set_font("DejaVu", "", base_font_size)
-    else:
-        pdf.set_font("Arial", "", base_font_size)
-    start_x = pdf.get_x()
-    used_width = start_x - (pdf.l_margin + INDENT)
-    pdf.multi_cell(effective_page_width - used_width, line_h, sanitize_text(strip_md(body)))
-    pdf.set_xy(pdf.l_margin, pdf.get_y())
-    pdf.ln(0.5)
-    continue
+                    try:
+                    if UNICODE_FONT and UNICODE_FONT_BOLD:
+                        pdf.set_font("DejaVu", "B", base_font_size)
+                    elif:
+                        pdf.set_font("DejaVu", "", base_font_size + 1)  # pseudo-bold
+                    else:
+                        pdf.set_font("Arial", "B", base_font_size)
+                    
+                    label = "Purpose- "
+                    pdf.cell(pdf.get_string_width(label) + 1, line_h, sanitize_text(label), ln=0)
+                    start_x = pdf.get_x()
+                    used_width = start_x - (pdf.l_margin + INDENT)
+                    pdf.multi_cell(effective_page_width - used_width, line_h, sanitize_text(strip_md(body)))
+                    pdf.set_xy(pdf.l_margin, pdf.get_y())
+                    pdf.ln(0.5)
+                    continue
                 # STAT bullet — render as plain line (YoY: bold label prefix), then insert figure
                 if content.upper().startswith("STAT") or content.upper().startswith("IMPACT"):
                     if UNICODE_FONT:
