@@ -488,23 +488,41 @@ df["Monthly Release %"] = 0.0
 df["Cumulative %"] = 0.0
 
 for pool in pools_list:
-    tge_percent = allocations[pool] * vesting_schedule[pool]["tge"] / 100.0
-    cliff = int(vesting_schedule[pool]["cliff"])
-    vest = int(vesting_schedule[pool]["vesting"])
-    monthly_percent = (allocations[pool] - tge_percent) / vest if vest > 0 else 0.0
+    # Sanitize numeric inputs
+    cliff = int(vesting_schedule[pool].get("cliff", 0))
+    vest = int(vesting_schedule[pool].get("vesting", 0))
+    tge_pct_raw = float(vesting_schedule[pool].get("tge", 0))
+    alloc_pct = allocations.get(pool, 0.0)
 
+    # Compute the TGE portion (as % of total supply)
+    tge_fraction = tge_pct_raw / 100.0
+    tge_percent = alloc_pct * tge_fraction
+
+    # Initialize a release array for this pool
     release = [0.0] * 72
-    # TGE (M0)
-    release[0] += tge_percent
-    start_m = cliff + 1
-    end_m = cliff + vest
-    if vest > 0:
+
+    if vest <= 0:
+        # If no vesting period, release all tokens at TGE
+        release[0] += alloc_pct
+    else:
+        # Release TGE portion immediately at M0
+        release[0] += tge_percent
+
+        # Linear vesting of the remaining allocation
+        remaining_percent = alloc_pct - tge_percent
+        monthly_percent = remaining_percent / vest
+
+        # Release across 'vest' months starting the month after the cliff
+        start_m = cliff + 1
+        end_m   = cliff + vest
         for m in range(start_m, min(end_m, 71) + 1):
             release[m] += monthly_percent
 
+    # Add this pool’s monthly percentages to the overall dataframe
     df[pool] = release
     df["Monthly Release %"] += df[pool]
 
+# Convert percentages to token counts
 df["Monthly Release Tokens"] = df["Monthly Release %"] * total_supply_tokens / 100.0
 df["Cumulative Tokens"] = df["Monthly Release Tokens"].cumsum()
 df["Cumulative %"] = (df["Cumulative Tokens"] / total_supply_tokens) * 100.0
