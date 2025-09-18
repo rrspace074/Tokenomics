@@ -480,34 +480,81 @@ else:
     """, unsafe_allow_html=True)
 
 # -----------------------------
-# Build vesting schedule dataframe
+# Build vesting schedule dataframe (token-precise, cliff-safe)
 # -----------------------------
-months = list(range(72))
-df = pd.DataFrame({"Month": months})
-df["Monthly Release %"] = 0.0
-df["Cumulative %"] = 0.0
 
-for pool in pools_list:
-    tge_percent = allocations[pool] * vesting_schedule[pool]["tge"] / 100.0
-    cliff = int(vesting_schedule[pool]["cliff"])
-    vest = int(vesting_schedule[pool]["vesting"])
-    monthly_percent = (allocations[pool] - tge_percent) / vest if vest > 0 else 0.0
+def build_release_schedule(
+    pools_list: list[str],
+    allocations: dict,
+    vesting_schedule: dict,
+    total_supply_tokens: int,
+    total_months: int = 72,
+    catchup: bool = False,  # if True, unlocks the linear accrual that would have happened during the cliff at the cliff end
+):
+    """Return a dataframe with Monthly Release Tokens/% and Cumulative columns.
 
-    release = [0.0] * 72
-    # TGE (M0)
-    release[0] += tge_percent
-    start_m = cliff + 1
-    end_m = cliff + vest
-    if vest > 0:
-        for m in range(start_m, min(end_m, 71) + 1):
-            release[m] += monthly_percent
+    We compute in **tokens** first to avoid cumulative rounding drift and then
+    derive percentages from tokens. Linear vesting starts strictly **after** the
+    cliff at month `cliff + 1` unless `catchup=True`, in which case the linear
+    accrual that would have occurred during the cliff is released at `month = cliff`.
+    """
+    months = list(range(total_months))
+    df = pd.DataFrame({"Month": months})
+    df["Monthly Release Tokens"] = 0.0
 
-    df[pool] = release
-    df["Monthly Release %"] += df[pool]
+    for pool in pools_list:
+        alloc_pct = float(allocations[pool])
+        tge_pct_of_pool = float(vesting_schedule[pool].get("tge", 0.0))
+        cliff = int(vesting_schedule[pool].get("cliff", 0))
+        vest = int(vesting_schedule[pool].get("vesting", 0))
 
-df["Monthly Release Tokens"] = df["Monthly Release %"] * total_supply_tokens / 100.0
-df["Cumulative Tokens"] = df["Monthly Release Tokens"].cumsum()
-df["Cumulative %"] = (df["Cumulative Tokens"] / total_supply_tokens) * 100.0
+        # compute pool tokens
+        pool_tokens = total_supply_tokens * (alloc_pct / 100.0)
+        tge_tokens = pool_tokens * (tge_pct_of_pool / 100.0)
+        linear_tokens_total = max(pool_tokens - tge_tokens, 0.0)
+
+        release = [0.0] * total_months
+        # TGE happens at Month 0
+        release[0] += tge_tokens
+
+        if vest > 0 and linear_tokens_total > 0:
+            if catchup and cliff > 0:
+                # unlock the linear accrual at the cliff end, then continue monthly
+                accrued = linear_tokens_total * (cliff / vest)
+                idx = min(cliff, total_months - 1)
+                release[idx] += accrued
+                remaining_months = max(vest - cliff, 1)
+                per_month = (linear_tokens_total - accrued) / remaining_months
+                start_m = cliff + 1
+                end_m = cliff + vest
+            else:
+                per_month = linear_tokens_total / vest
+                start_m = cliff + 1
+                end_m = cliff + vest
+
+            for m in range(start_m, min(end_m, total_months - 1) + 1):
+                release[m] += per_month
+
+        # track per-pool and aggregate
+        df[pool] = release
+        df["Monthly Release Tokens"] += df[pool]
+
+    # derive % from tokens (more stable numerically)
+    df["Monthly Release %"] = (df["Monthly Release Tokens"] / float(total_supply_tokens)) * 100.0
+    df["Cumulative Tokens"] = df["Monthly Release Tokens"].cumsum()
+    df["Cumulative %"] = (df["Cumulative Tokens"] / float(total_supply_tokens)) * 100.0
+    return df
+
+# Build schedule using token-precise simulator (no cliff catch-up by default)
+months = 72
+df = build_release_schedule(
+    pools_list=pools_list,
+    allocations=allocations,
+    vesting_schedule=vesting_schedule,
+    total_supply_tokens=total_supply_tokens,
+    total_months=months,
+    catchup=False,  # set True if your vest design requires a cliff catch-up unlock
+)
 
 st.markdown("""
 <div class="success-box">
@@ -829,7 +876,7 @@ if generate:
         year1["Monthly Release Tokens"] = year1["Monthly Release Tokens"].apply(lambda x: f"{x:,.0f}")
         year1["Cumulative Tokens"] = year1["Cumulative Tokens"].apply(lambda x: f"{x:,.0f}")
         year1["Cumulative %"] = year1["Cumulative %"].apply(lambda x: f"{x:.2f}%")
-        st.markdown("### Year 1 Cumulative Token Release (M0–M12)")
+        st.markdown("### Year 1 Monthly Token Release (M0–M12)")
         st.table(year1)
     except Exception as e:
         st.markdown(f"<div class='warning-box'>Could not render Year 1 table: {e}</div>", unsafe_allow_html=True)
