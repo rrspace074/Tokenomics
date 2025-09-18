@@ -483,7 +483,7 @@ else:
 # How to interpret the "Vesting (months)" column
 vest_includes_cliff = st.checkbox(
     "Treat 'Vesting (months)' as TOTAL months including the cliff",
-    value=True,
+    value=False,
     help=(
         "ON → Linear months = Vesting − Cliff (common in spreadsheets).\n"
         "OFF → Linear months = Vesting (Cliff is separate)."
@@ -500,7 +500,7 @@ def build_release_schedule(
     total_supply_tokens: int,
     total_months: int = 72,
     catchup: bool = False,  # if True, unlocks the linear accrual that would have happened during the cliff at the cliff end
-    vest_includes_cliff: bool = True,
+    vest_includes_cliff: bool = False,
 ):
     """Return a dataframe with Monthly Release Tokens/% and Cumulative columns.
 
@@ -539,9 +539,17 @@ def build_release_schedule(
                 start_m = cliff + 1
                 end_m = cliff + vest
             else:
-                # If the sheet's "Vesting (months)" is TOTAL including the cliff,
-                # then linear vesting months = vest - cliff. Otherwise it's already post‑cliff.
-                linear_months = max((vest - cliff) if vest_includes_cliff else vest, 1)
+                # Determine linear months with a safety heuristic:
+                # - If the sheet says "Vesting includes cliff" but vest <= cliff, assume the author
+                #   actually entered a post‑cliff vest duration (common spreadsheet confusion).
+                if vest_includes_cliff:
+                    if vest <= cliff:
+                        # Treat provided vest as post‑cliff months to avoid one‑month mega‑unlock
+                        linear_months = max(vest, 1)
+                    else:
+                        linear_months = max(vest - cliff, 1)
+                else:
+                    linear_months = max(vest, 1)
                 per_month = linear_tokens_total / linear_months
                 start_m = cliff + 1
                 end_m = cliff + linear_months
