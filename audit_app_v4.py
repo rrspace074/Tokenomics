@@ -479,6 +479,16 @@ else:
     </div>
     """, unsafe_allow_html=True)
 
+#
+# How to interpret the "Vesting (months)" column
+vest_includes_cliff = st.checkbox(
+    "Treat 'Vesting (months)' as TOTAL months including the cliff",
+    value=True,
+    help=(
+        "ON → Linear months = Vesting − Cliff (common in spreadsheets).\n"
+        "OFF → Linear months = Vesting (Cliff is separate)."
+    ),
+)
 # -----------------------------
 # Build vesting schedule dataframe (token-precise, cliff-safe)
 # -----------------------------
@@ -490,6 +500,7 @@ def build_release_schedule(
     total_supply_tokens: int,
     total_months: int = 72,
     catchup: bool = False,  # if True, unlocks the linear accrual that would have happened during the cliff at the cliff end
+    vest_includes_cliff: bool = True,
 ):
     """Return a dataframe with Monthly Release Tokens/% and Cumulative columns.
 
@@ -528,9 +539,12 @@ def build_release_schedule(
                 start_m = cliff + 1
                 end_m = cliff + vest
             else:
-                per_month = linear_tokens_total / vest
+                # If the sheet's "Vesting (months)" is TOTAL including the cliff,
+                # then linear vesting months = vest - cliff. Otherwise it's already post‑cliff.
+                linear_months = max((vest - cliff) if vest_includes_cliff else vest, 1)
+                per_month = linear_tokens_total / linear_months
                 start_m = cliff + 1
-                end_m = cliff + vest
+                end_m = cliff + linear_months
 
             for m in range(start_m, min(end_m, total_months - 1) + 1):
                 release[m] += per_month
@@ -554,6 +568,7 @@ df = build_release_schedule(
     total_supply_tokens=total_supply_tokens,
     total_months=months,
     catchup=False,  # set True if your vest design requires a cliff catch-up unlock
+    vest_includes_cliff=vest_includes_cliff,
 )
 
 st.markdown("""
@@ -878,6 +893,13 @@ if generate:
         year1["Cumulative %"] = year1["Cumulative %"].apply(lambda x: f"{x:.2f}%")
         st.markdown("### Year 1 Monthly Token Release (M0–M12)")
         st.table(year1)
+        # Debug: by‑pool monthly breakdown (in millions)
+        year1_by_pool = df.loc[0:12, ["Month"] + pools_list].copy()
+        for p in pools_list:
+            year1_by_pool[p] = (year1_by_pool[p] / 1_000_000).round(2)
+        year1_by_pool["Month"] = year1_by_pool["Month"].apply(lambda m: f"M{int(m)}")
+        with st.expander("🔎 Year 1 breakdown by pool (millions)", expanded=False):
+            st.dataframe(year1_by_pool)
     except Exception as e:
         st.markdown(f"<div class='warning-box'>Could not render Year 1 table: {e}</div>", unsafe_allow_html=True)
 
